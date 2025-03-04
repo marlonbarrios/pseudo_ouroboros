@@ -752,6 +752,9 @@ function startSound() {
 	osc.amp(0.6, 0.1);        // Louder test sound
 	
 	audioStarted = true;
+	// Update sound indicator
+	document.getElementById('sound-dot').style.color = 'green';
+	document.getElementById('sound-text').innerText = 'ON';
 	console.log('Sound started');
 	
 	// Start drone sounds
@@ -762,6 +765,9 @@ function startSound() {
 function stopSound() {
 	osc.amp(0, 0.1);
 	audioStarted = false;
+	// Update sound indicator
+	document.getElementById('sound-dot').style.color = 'red';
+	document.getElementById('sound-text').innerText = 'OFF';
 	console.log('Sound stopped');
 	
 	// Stop drone sounds
