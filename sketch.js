@@ -101,6 +101,13 @@ let droneFilter;
 let droneReverb;
 let droneDepth = 0;
 
+// Add these variables at the top
+let evolutionTime = 0;
+let complexityLevel = 0;
+let maxComplexity = 5;
+let lastEvolutionCheck = 0;
+let evolutionInterval = 30000; // Time between evolutions (30 seconds)
+
 function windowResized() {
 	resizeCanvas(windowWidth, windowHeight);
 	// Adjust snake properties based on new canvas size
@@ -235,7 +242,10 @@ function draw() {
 		lastValidTarget = createVector(segments[0].x, segments[0].y);
 	}
 	
-	// Update movement behavior
+	// Evolve complexity over time
+	evolveComplexity();
+	
+	// Update movement behavior with evolution
 	if (!mouseIsPressed) {
 		timeSinceLastRest++;
 		
@@ -361,6 +371,38 @@ function draw() {
 				}
 			}
 		}
+		
+		// Add safety checks for evolution-based movement
+		if (!mouseIsPressed && !isResting && !edgeExploring) {
+			let safeComplexity = constrain(complexityLevel, 0, maxComplexity);
+			
+			// Safe movement calculations
+			let evolutionNoise = noise(
+				frameCount * constrain(0.01 + safeComplexity * 0.005, 0, 0.1),
+				safeComplexity * 100
+			) * safeComplexity;
+			
+			// Constrain movement additions
+			let xAdd = sin(frameCount * (0.02 + safeComplexity * 0.01)) * (10 + safeComplexity * 5);
+			let yAdd = cos(frameCount * (0.015 + safeComplexity * 0.01)) * (10 + safeComplexity * 5);
+			
+			targetX += constrain(xAdd, -50, 50);
+			targetY += constrain(yAdd, -50, 50);
+			
+			// Safe circular patterns
+			let radius = constrain(50 + safeComplexity * 20, 0, 200);
+			let angle = frameCount * constrain(0.02 + safeComplexity * 0.01, 0, 0.1);
+			
+			targetX += constrain(sin(angle) * radius * evolutionNoise, -100, 100);
+			targetY += constrain(cos(angle * 1.5) * radius * evolutionNoise, -100, 100);
+			
+			// Ensure targets stay within bounds
+			targetX = constrain(targetX, 50, width - 50);
+			targetY = constrain(targetY, 50, height - 50);
+		}
+		
+		// Adjust speed multiplier based on complexity
+		speedMultiplier = constrain(1 + complexityLevel * 0.2, 0.5, 2.5);
 	} else {
 		// Reset rest state when mouse is pressed
 		isResting = false;
@@ -801,29 +843,60 @@ function makeSniffingSound(intensity) {
 function updateDrone() {
 	if (!soundEnabled || !audioStarted) return;
 	
-	// Get movement metrics
 	let speed = dist(segments[0].x, segments[0].y, lastPosition.x, lastPosition.y);
 	
-	// Update drone frequencies based on position
+	// More complex frequency modulation based on evolution
 	let baseFreq = map(segments[0].y, height, 0, 40, 80);
-	let detune = map(segments[0].x, 0, width, -4, 4);
+	let detune = map(segments[0].x, 0, width, -4 - complexityLevel, 4 + complexityLevel);
 	
-	droneOsc1.freq(baseFreq + sin(frameCount * 0.01) * 0.5);
-	droneOsc2.freq(baseFreq * 1.5 + detune + cos(frameCount * 0.013) * 0.7);
+	// Add evolution-based modulation
+	let evolutionMod = sin(frameCount * (0.01 + complexityLevel * 0.005)) * complexityLevel;
 	
-	// Modulate drone amplitudes
-	let droneAmp = map(speed, 0, 10, 0.4, 0.1);  // Higher base amplitude
+	droneOsc1.freq(baseFreq + evolutionMod + sin(frameCount * 0.01) * (0.5 + complexityLevel));
+	droneOsc2.freq(baseFreq * (1.5 + complexityLevel * 0.1) + detune + evolutionMod);
+	
+	// More complex amplitude modulation
+	let droneAmp = map(speed, 0, 10, 0.4, 0.1) * (1 + sin(frameCount * 0.1) * complexityLevel * 0.1);
 	droneOsc1.amp(droneAmp, 0.1);
-	droneOsc2.amp(droneAmp * 0.8, 0.1);  // Increased secondary oscillator
+	droneOsc2.amp(droneAmp * (0.8 + complexityLevel * 0.05), 0.1);
 	
-	// Enhanced filter modulation
-	let filterFreq = map(bendAmount, 0, 1, 400, 2000);  // Wider filter range
-	filterFreq *= map(curvature, 0, PI, 1, 2);  // More dramatic modulation
+	// Enhanced filter modulation with evolution
+	let filterFreq = map(bendAmount, 0, 1, 400, 2000 + complexityLevel * 500);
+	filterFreq *= map(curvature, 0, PI, 1, 2 + complexityLevel * 0.2);
 	droneFilter.freq(filterFreq);
 	
-	// More prominent resonance
-	droneFilter.res(map(stretchAmount, 0, 10, 10, 20));
-	
-	// Increased reverb presence
-	droneReverb.drywet(map(speed, 0, 20, 0.9, 0.5));
+	droneFilter.res(map(stretchAmount, 0, 10, 10 + complexityLevel * 2, 20 + complexityLevel * 3));
+	droneReverb.drywet(map(speed, 0, 20, 0.9, 0.5 + complexityLevel * 0.1));
+}
+
+// Add this function to handle evolution
+function evolveComplexity() {
+	let currentTime = millis();
+	if (currentTime - lastEvolutionCheck > evolutionInterval) {
+		lastEvolutionCheck = currentTime;
+		evolutionTime++;
+		
+		// Constrain complexity level
+		complexityLevel = constrain(evolutionTime / 8, 0, maxComplexity);
+		
+		// Safety check for harmonics
+		if (harmonics && harmonics.length < 8) { // Limit max harmonics
+			try {
+				harmonics.push({
+					freq: baseFreq * (2 + complexityLevel * 0.5),
+					amp: 0.3 / (1 + complexityLevel * 0.2)
+				});
+			} catch (e) {
+				console.log('Harmonic creation failed:', e);
+			}
+		}
+		
+		// Safely update sound parameters
+		try {
+			if (droneFilter) droneFilter.res(constrain(12 + complexityLevel * 2, 0, 30));
+			if (delay) delay.feedback(constrain(0.4 + complexityLevel * 0.1, 0, 0.9));
+		} catch (e) {
+			console.log('Sound parameter update failed:', e);
+		}
+	}
 }
