@@ -47,7 +47,6 @@ let edgeDirection = 1;  // 1 for clockwise, -1 for counterclockwise
 
 // Add these variables at the top
 let soundEnabled = false;
-let soundIconText = "Press SPACE to enable sound";
 let audioStarted = false;
 
 // Add these variables at the top
@@ -108,6 +107,12 @@ let maxComplexity = 5;
 let lastEvolutionCheck = 0;
 let evolutionInterval = 30000; // Time between evolutions (30 seconds)
 
+// Add these variables at the top
+let headGlow = 0;  // Current glow intensity
+let maxGlow = 1.5;  // Maximum glow multiplier
+let glowDecay = 0.95;  // How quickly glow fades
+let edgeGlowDistance = 150;  // Distance from edge to start glowing
+
 function windowResized() {
 	resizeCanvas(windowWidth, windowHeight);
 	// Adjust snake properties based on new canvas size
@@ -126,7 +131,10 @@ function windowResized() {
 }
 
 function setup() {
-	createCanvas(windowWidth, windowHeight);
+	let canvas = createCanvas(windowWidth, windowHeight);
+	canvas.style('z-index', '10');  // Set canvas above other elements
+	canvas.position(0, 0);  // Position at top-left
+	canvas.style('pointer-events', 'none');  // Allow clicking through canvas to elements below
 	
 	// Initialize audio components with proper gain
 	osc = new p5.Oscillator('sawtooth');
@@ -452,8 +460,40 @@ function draw() {
 		lastPosition.set(segments[0].x, segments[0].y);
 	}
 	
+	// Calculate edge proximity glow
+	let head = segments[0];
+	let edgeProximity = min(
+		head.x,  // Distance from left
+		width - head.x,  // Distance from right
+		head.y,  // Distance from top
+		height - head.y  // Distance from bottom
+	);
+	
+	// Increase glow when near edges
+	if (edgeProximity < edgeGlowDistance) {
+		let glowIntensity = map(edgeProximity, 0, edgeGlowDistance, maxGlow, 0);
+		headGlow = lerp(headGlow, glowIntensity, 0.1);
+	}
+	
 	// Draw the snake
 	noFill();
+	
+	// Draw glow layers for head
+	if (headGlow > 0.1) {
+		let glowLayers = 3;
+		for (let i = glowLayers; i > 0; i--) {
+			strokeWeight(100 + i * 20 * headGlow);
+			let alpha = map(i, 0, glowLayers, 20, 80) * headGlow;
+			stroke(255, 100, 100, alpha);
+			beginShape();
+			curveVertex(head.x, head.y);
+			curveVertex(head.x, head.y);
+			curveVertex(segments[1].x, segments[1].y);
+			curveVertex(segments[2].x, segments[2].y);
+			curveVertex(segments[2].x, segments[2].y);
+			endShape();
+		}
+	}
 	
 	// Draw black outline
 	strokeWeight(100);
@@ -468,22 +508,20 @@ function draw() {
 	curveVertex(segments[segments.length-1].x, segments[segments.length-1].y);
 	endShape();
 	
-	// Draw colored body
+	// Draw colored body with glow influence
 	strokeWeight(28);
-	strokeCap(ROUND); 
+	strokeCap(ROUND);
 	
 	if (mouseIsPressed) {
 		stroke(224, 130, 133);
 	} else {
 		let r, g, b;
 		if (isResting) {
-			// More relaxed colors when resting
 			r = map(sin(frameCount * 0.02), -1, 1, 160, 200);
 			g = map(sin(frameCount * 0.02), -1, 1, 15, 30);
 			b = map(sin(frameCount * 0.02), -1, 1, 20, 40);
 		} else {
-			// Original color code
-			r = map(speedMultiplier, 0.1, 3, 180, 255);
+			r = map(speedMultiplier, 0.1, 3, 180, 255) + headGlow * 50;
 			g = map(speedMultiplier, 0.1, 3, 20, 50);
 			b = map(speedMultiplier, 0.1, 3, 27, 60);
 		}
@@ -497,6 +535,9 @@ function draw() {
 	}
 	curveVertex(segments[segments.length-1].x, segments[segments.length-1].y);
 	endShape();
+	
+	// Decay glow
+	headGlow *= glowDecay;
 	
 	// Simpler sound generation based on movement
 	if (soundEnabled && frameCount % 3 === 0) {  // Check every 3 frames
@@ -514,27 +555,6 @@ function draw() {
 	
 	// Only draw UI elements if showUI is true
 	if (showUI) {
-		// Draw sound status text with better visibility
-		textSize(20);
-		textAlign(LEFT);
-		
-		// Draw text shadow/outline for better contrast
-		noStroke();
-		fill(255);
-		text(soundIconText, 21, height - 19);
-		text(soundIconText, 19, height - 21);
-		text(soundIconText, 21, height - 21);
-		text(soundIconText, 19, height - 19);
-		
-		// Draw main text
-		fill(0);
-		text(soundIconText, 20, height - 20);
-		
-		// Add small indicator dot
-		noStroke();
-		fill(soundEnabled ? color(0, 255, 0) : color(255, 0, 0));
-		ellipse(10, height - 24, 8, 8);
-		
 		// Draw recording indicator
 		if (recording) {
 			noStroke();
@@ -618,6 +638,9 @@ function calculateSnakeMetrics() {
 
 function makeUnderwaterSound(intensity = 0.5) {
 	if (!soundEnabled || !audioStarted) return;
+	
+	// Add glow when making sounds
+	headGlow = lerp(headGlow, maxGlow * intensity, 0.3);
 	
 	calculateSnakeMetrics();
 	
@@ -729,7 +752,6 @@ function startSound() {
 	osc.amp(0.6, 0.1);        // Louder test sound
 	
 	audioStarted = true;
-	soundIconText = "SOUND ON - Press SPACE to toggle";
 	console.log('Sound started');
 	
 	// Start drone sounds
@@ -740,7 +762,6 @@ function startSound() {
 function stopSound() {
 	osc.amp(0, 0.1);
 	audioStarted = false;
-	soundIconText = "SOUND OFF - Press SPACE to toggle";
 	console.log('Sound stopped');
 	
 	// Stop drone sounds

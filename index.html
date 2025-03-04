@@ -1,23 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="utf-8">
-	<title>Gradient Descent</title>
-
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.min.js"></script>
-	<script src="sketch.js"></script>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Squiggle in Gradient Descent</title>
 	<style>
 		body {
 			margin: 0;
 			padding: 0;
 			overflow: hidden;
+			background: #f0f0f0;
+		}
+		#sound-icon {
+			position: fixed;
+			top: 20px;
+			right: 20px;
+			padding: 10px;
+			background: rgba(255, 255, 255, 0.8);
+			border-radius: 5px;
+			font-family: Arial, sans-serif;
+			font-size: 14px;
+			line-height: 1.4;
+			cursor: pointer;
+			z-index: 20;
+			opacity: 0.8;
+			transition: opacity 0.3s;
+		}
+		#sound-icon:hover {
+			opacity: 1;
+		}
+		canvas {
+			position: fixed !important;
+			top: 0;
+			left: 0;
+			z-index: 15;
+		}
+		/* Ensure other elements stay below the canvas */
+		.p5Canvas {
+			pointer-events: none;
 		}
 	</style>
-
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.min.js"></script>
 </head>
 
 <body>
+	<div id="sound-icon">
+		Hints:<br>
+		SPACE: Toggle sound<br>
+		R/S: Record<br>
+		Mouse: Influence field
+		<div id="sound-status" style="margin-top: 5px;">
+			Sound: <span style="color: red;">●</span> OFF
+		</div>
+	</div>
+	<script src="sketch.js"></script>
 </body>
 
 </html>

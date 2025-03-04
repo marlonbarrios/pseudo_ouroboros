@@ -1,42 +1,27 @@
-# Squiggle in Gradient Descent
+# Squige in Gradient Descent
 
 ![Snake Soundscape](squiggle.png)
 
-An interactive audiovisual experience that explores the metaphor of gradient descent through the movement of a snake-like entity. The snake follows gradient fields while producing dynamic, movement-based sounds.
+An interactive audiovisual experience where a snake-like form explores its environment with organic movement and generative sound.
 
 ## Live Demo
-[Try Squiggle in Gradient Descent Here](https://snake-soundscape.vercel.app)
+[Try Snake Soundscape Here](https://snake-soundscape.vercel.app)
 
-## Concept
-Gradient descent is a fundamental optimization algorithm used in machine learning and mathematics. It works by iteratively moving in the direction of steepest descent to find the minimum of a function. This project visualizes this concept through the movement of a snake-like form that:
-
-- Explores its environment like a gradient descent algorithm explores a loss landscape
-- "Sniffs" around edges to find optimal paths, similar to how gradient descent probes for better solutions
-- Exhibits periods of rest when finding local minima
-- Shows varying speeds of movement based on the "steepness" of its current position
-- Evolves its behavior over time, like an optimization process refining its search
+## Description
+Snake Soundscape is an interactive art piece that combines visual movement with procedural audio. The snake explores its environment autonomously, creating sounds based on its movement patterns, curvature, and interactions with the space.
 
 ## Features
-- Gradient-based autonomous movement
-- Edge exploration and local minima detection
-- Dynamic sound generation based on movement patterns
+- Autonomous snake movement with edge exploration
+- Generative audio based on movement
+- Interactive sound controls
+- Recording capability
 - Evolution of complexity over time
-- Interactive influence on the gradient field
-- Recording capability for capturing interesting moments
 
 ## Controls
 - SPACE: Toggle sound on/off
 - R: Start recording
 - S: Stop recording
-- Mouse: Influence the gradient field
-
-## Technical Details
-The project uses:
-- Perlin noise to create smooth gradient fields
-- Dynamic path finding algorithms
-- Procedural audio synthesis
-- Physics-based movement simulation
-- Evolutionary behavior patterns
+- Mouse interaction affects snake behavior
 
 ## Installation
 1. Clone this repository
