@@ -1,64 +1,67 @@
-# Gradient Descent
+# Squiggle in Gradient Descent
+
+![Snake Soundscape](squiggle.png)
 
 An interactive audiovisual experience that explores the metaphor of gradient descent through the movement of a snake-like entity. The snake follows gradient fields while producing dynamic, movement-based sounds.
 
-## Overview
+## Live Demo
+[Try Squiggle in Gradient Descent Here](https://snake-soundscape.vercel.app)
 
-This project combines visual art, sound design, and algorithmic movement to create an organic, evolving experience. The snake entity moves through a dynamic gradient field, creating an emergent behavior that mimics both natural movement and optimization algorithms.
+## Concept
+Gradient descent is a fundamental optimization algorithm used in machine learning and mathematics. It works by iteratively moving in the direction of steepest descent to find the minimum of a function. This project visualizes this concept through the movement of a snake-like form that:
+
+- Explores its environment like a gradient descent algorithm explores a loss landscape
+- "Sniffs" around edges to find optimal paths, similar to how gradient descent probes for better solutions
+- Exhibits periods of rest when finding local minima
+- Shows varying speeds of movement based on the "steepness" of its current position
+- Evolves its behavior over time, like an optimization process refining its search
 
 ## Features
-
-- **Dynamic Movement**: Snake follows gradient fields and exhibits various behaviors:
-  - Gradient-based exploration
-  - Edge investigation with sniffing behavior
-  - Resting states
-  - Organic movement patterns
-
-- **Interactive Sound Design**:
-  - Movement-responsive audio
-  - Harmonic sound generation
-  - Environmental ambience
-  - Sniffing sound effects
-  - Adjustable sound intensity
-
-- **Visual Elements**:
-  - Smooth, organic animation
-  - Dynamic color changes
-  - Responsive movement trails
-  - Gradient field influence
+- Gradient-based autonomous movement
+- Edge exploration and local minima detection
+- Dynamic sound generation based on movement patterns
+- Evolution of complexity over time
+- Interactive influence on the gradient field
+- Recording capability for capturing interesting moments
 
 ## Controls
-
-- **SPACE**: Toggle sound on/off
-- **R**: Start recording
-- **S**: Stop recording
-- **Mouse**: Direct interaction with the snake
+- SPACE: Toggle sound on/off
+- R: Start recording
+- S: Stop recording
+- Mouse: Influence the gradient field
 
 ## Technical Details
-
-Built using:
-- p5.js for graphics and animation
-- p5.sound.js for audio synthesis
-- Perlin noise for organic movement
-- WebAudio API for sound processing
+The project uses:
+- Perlin noise to create smooth gradient fields
+- Dynamic path finding algorithms
+- Procedural audio synthesis
+- Physics-based movement simulation
+- Evolutionary behavior patterns
 
 ## Installation
+1. Clone this repository
+2. Open index.html in a web browser
+3. Or serve using a local server (recommended for audio features)
 
-1. Clone the repository
-2. Open `index.html` in a modern web browser
-3. Enable audio for the full experience
+## License
+MIT License
 
-## Recording Feature
+Copyright (c) 2024
 
-The project includes a built-in recording capability:
-1. Press 'R' to start recording
-2. Press 'S' to stop and save
-3. Recording will be saved as a WebM file
-4. Use HandBrake to convert to other formats if needed
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-## Credits
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-Inspired by:
-- Gradient descent optimization algorithms
-- Natural movement patterns
-- Generative sound design 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE. 
