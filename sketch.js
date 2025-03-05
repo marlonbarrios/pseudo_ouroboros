@@ -113,6 +113,13 @@ let maxGlow = 1.5;  // Maximum glow multiplier
 let glowDecay = 0.95;  // How quickly glow fades
 let edgeGlowDistance = 150;  // Distance from edge to start glowing
 
+// Add these variables at the top
+let clickOsc;
+let clickEnv;
+let lastClickTime = 0;
+let minClickInterval = 100;  // Minimum time between clicks
+let clickIntensity = 0;
+
 function windowResized() {
 	resizeCanvas(windowWidth, windowHeight);
 	// Adjust snake properties based on new canvas size
@@ -240,6 +247,17 @@ function setup() {
 	
 	// Increase main sound volume
 	reverb.amp(1.2);      // Higher master volume
+	
+	// Initialize click oscillator and envelope
+	clickOsc = new p5.Oscillator('sine');
+	clickEnv = new p5.Envelope();
+	clickEnv.setADSR(0.001, 0.02, 0, 0.02);
+	clickEnv.setRange(0.3, 0);
+	
+	clickOsc.amp(0);
+	clickOsc.start();
+	clickOsc.disconnect();
+	clickOsc.connect(filter);
 }
 
 function draw() {
@@ -567,6 +585,11 @@ function draw() {
 			text('Recording...', width - 40, 25);
 		}
 	}
+	
+	// Add echolocation clicks when exploring
+	if (edgeExploring && soundEnabled) {
+		makeClickSound();
+	}
 }
 
 function calculateMovementMetrics() {
@@ -760,6 +783,9 @@ function startSound() {
 	// Start drone sounds
 	droneOsc1.amp(0.15, 1);
 	droneOsc2.amp(0.1, 1);
+	
+	clickOsc.start();
+	clickOsc.amp(0);
 }
 
 function stopSound() {
@@ -773,6 +799,8 @@ function stopSound() {
 	// Stop drone sounds
 	droneOsc1.amp(0, 0.5);
 	droneOsc2.amp(0, 0.5);
+	
+	clickOsc.amp(0);
 }
 
 // Add this function to set up recording
@@ -926,4 +954,32 @@ function evolveComplexity() {
 			console.log('Sound parameter update failed:', e);
 		}
 	}
+}
+
+// Add this new function for echolocation clicks
+function makeClickSound() {
+	if (!soundEnabled || !audioStarted) return;
+	
+	let currentTime = millis();
+	if (currentTime - lastClickTime < minClickInterval) return;
+	
+	// Calculate distance to edges
+	let head = segments[0];
+	let edgeProximity = min(
+		head.x,
+		width - head.x,
+		head.y,
+		height - head.y
+	);
+	
+	// Adjust click parameters based on proximity
+	let clickFreq = map(edgeProximity, 0, 200, 2000, 800);
+	let clickRate = map(edgeProximity, 0, 200, 50, 200);
+	minClickInterval = clickRate;
+	
+	// Make the click sound
+	clickOsc.freq(clickFreq);
+	clickEnv.play(clickOsc);
+	
+	lastClickTime = currentTime;
 }

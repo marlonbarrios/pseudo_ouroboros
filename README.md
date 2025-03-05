@@ -1,14 +1,19 @@
-# Squige in Gradient Descent
+# Squiggle in Gradient Descent
 
 ![Snake Soundscape](squiggle.png)
 
 An interactive audiovisual experience where a snake-like form explores its environment with organic movement and generative sound.
 
 ## Live Demo
-[Experience Squige in Gradient Descent](https://marlonbarrios.github.io/sentient_squigle/)
+[Experience Squiggle in Gradient Descent](https://marlonbarrios.github.io/sentient_squigle/)
 
 ## Description
-A generative art piece that combines visual movement with procedural audio. The snake explores its environment autonomously, creating sounds based on its movement patterns, curvature, and interactions with the space. As it moves, it exhibits emergent behaviors and creates dynamic soundscapes.
+A generative art piece that combines visual movement with procedural audio synthesis. The snake explores its environment autonomously while creating a rich soundscape through multiple audio layers:
+
+- Ambient drone sounds that evolve with the snake's movement
+- Echolocation-like clicks when exploring edges
+- Movement-based harmonic sounds
+- Sniffing sounds during environmental exploration
 
 ## Features
 - Autonomous snake movement with edge exploration
@@ -19,6 +24,14 @@ A generative art piece that combines visual movement with procedural audio. The 
 - Dynamic edge interaction
 - Ambient sound generation
 - Mouse-based interaction
+
+## Sound Design
+The audio experience consists of multiple layers:
+- **Base Drone**: Evolving ambient sound that responds to position and movement
+- **Movement Harmonics**: Dynamic tones based on speed and curvature
+- **Edge Clicks**: Echolocation-style sounds when near boundaries
+- **Exploration Sounds**: Sniffing sounds during environmental investigation
+- **Evolution**: Sound complexity increases over time
 
 ## Controls
 - SPACE: Toggle sound on/off
