@@ -141,6 +141,13 @@ let trailDecay = 0.997;  // Much slower decay for longer-lasting trails
 let trailWidth = 100;   // Match snake's full body width
 let trailSpread = 2;    // How much the trail spreads over time
 
+// Add these variables at the top
+let fragments = [];
+let fragmenting = false;
+let reassembling = false;
+let fragmentTimer = 0;
+let fragmentDuration = 200;  // How long to stay fragmented
+
 function windowResized() {
 	resizeCanvas(windowWidth, windowHeight);
 	// Adjust snake properties based on new canvas size
@@ -743,6 +750,24 @@ function draw() {
 		// Decay glow
 		bodyGlow[i] *= bodyGlowDecay;
 	}
+	
+	// Random chance to fragment
+	if (!fragmenting && !reassembling && random(1) < 0.001) {
+		startFragmentation();
+	}
+	
+	if (fragmenting) {
+		updateFragments();
+		fragmentTimer++;
+		
+		if (fragmentTimer > fragmentDuration) {
+			startReassembly();
+		}
+	}
+	
+	if (reassembling) {
+		updateReassembly();
+	}
 }
 
 function calculateMovementMetrics() {
@@ -1192,4 +1217,108 @@ function makeSqueakSound(intensity) {
 			bodyGlow[selfExploreTarget + i] = max(bodyGlow[selfExploreTarget + i], glowIntensity * fadeAmount);
 		}
 	}
+}
+
+function startFragmentation() {
+	fragmenting = true;
+	fragments = [];
+	
+	// Split into 3-5 fragments
+	let numFragments = floor(random(3, 6));
+	let segmentsPerFragment = floor(segments.length / numFragments);
+	
+	for (let i = 0; i < numFragments; i++) {
+		let start = i * segmentsPerFragment;
+		let end = i === numFragments - 1 ? segments.length : start + segmentsPerFragment;
+		
+		fragments.push({
+			segments: segments.slice(start, end),
+			velocity: p5.Vector.random2D().mult(random(2, 5)),
+			rotation: random(-0.1, 0.1)
+		});
+	}
+}
+
+function updateFragments() {
+	for (let fragment of fragments) {
+		// Move fragment
+		for (let segment of fragment.segments) {
+			segment.x += fragment.velocity.x;
+			segment.y += fragment.velocity.y;
+			
+			// Rotate around fragment center
+			let center = createVector(0, 0);
+			for (let s of fragment.segments) {
+				center.add(createVector(s.x, s.y));
+			}
+			center.div(fragment.segments.length);
+			
+			let rotated = rotatePoint(
+				segment.x, segment.y,
+				center.x, center.y,
+				fragment.rotation
+			);
+			segment.x = rotated.x;
+			segment.y = rotated.y;
+		}
+		
+		// Slow down
+		fragment.velocity.mult(0.98);
+		fragment.rotation *= 0.98;
+	}
+}
+
+function startReassembly() {
+	fragmenting = false;
+	reassembling = true;
+	fragmentTimer = 0;
+}
+
+function updateReassembly() {
+	let allReassembled = true;
+	
+	for (let i = 0; i < fragments.length; i++) {
+		let fragment = fragments[i];
+		let targetStart = i * (segments.length / fragments.length);
+		
+		for (let j = 0; j < fragment.segments.length; j++) {
+			let segment = fragment.segments[j];
+			let targetIndex = floor(targetStart + j);
+			let target = segments[targetIndex];
+			
+			let dx = target.x - segment.x;
+			let dy = target.y - segment.y;
+			
+			segment.x += dx * 0.1;
+			segment.y += dy * 0.1;
+			
+			if (abs(dx) > 1 || abs(dy) > 1) {
+				allReassembled = false;
+			}
+		}
+	}
+	
+	if (allReassembled) {
+		reassembling = false;
+		fragments = [];
+	}
+}
+
+function rotatePoint(x, y, cx, cy, angle) {
+	let s = sin(angle);
+	let c = cos(angle);
+	
+	// Translate point back to origin
+	x -= cx;
+	y -= cy;
+	
+	// Rotate point
+	let xnew = x * c - y * s;
+	let ynew = x * s + y * c;
+	
+	// Translate point back
+	return {
+		x: xnew + cx,
+		y: ynew + cy
+	};
 }

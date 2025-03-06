@@ -1,27 +1,29 @@
-# Squiggle in Gradient Descent
+# Sentient Agent in Gradient Descent
 
-![Snake Soundscape](squiggle.png)
+![Agent Soundscape](squiggle.png)
 
-An interactive audiovisual experience where a luminous snake-like form explores its environment and itself through organic movement and generative sound. The creature exhibits emergent behaviors, creating dynamic soundscapes and visual responses as it investigates its surroundings and its own form.
+## Overview
+An exploration of distributed consciousness through a metamorphic digital entity that fragments, reassembles, and leaves traces of its thoughts in space. This artificial being challenges our understanding of unified identity by existing simultaneously as both one and many, while maintaining awareness across its distributed forms.
 
-## Live Demo
-[Experience Squiggle in Gradient Descent](https://marlonbarrios.github.io/sentient_squigle/)
+## Conceptual Framework
 
-## Description
-A generative art piece that combines visual movement with procedural audio synthesis. The snake explores its environment autonomously while creating a rich soundscape through multiple audio layers:
+This work investigates artificial sentience through the lens of a fluid, metamorphic digital organism. The agent exists in a state of constant potential transformation, able to fragment and reassemble at will while maintaining its consciousness. As it moves through space, it leaves ephemeral traces—like thoughts made visible—creating a dialogue between its distributed states and the environment.
 
-- Ambient drone sounds that evolve with the snake's movement
-- Echolocation-like clicks when exploring edges
-- Movement-based harmonic sounds
-- Sniffing sounds during environmental exploration
-- Human-like vocalizations during self-exploration
-- Soft pushing sounds during self-nudging
-- Propagating glow effects during interactions
+The agent challenges traditional notions of unified consciousness by existing simultaneously as both singular and multiple. When it spontaneously fragments, each piece retains aspects of the whole's awareness, moving with independent purpose before gracefully reintegrating. This fluid state between unity and multiplicity suggests new possibilities for understanding consciousness beyond individual identity.
+
+## Behaviors
+- **Spontaneous Fragmentation**: Splits into multiple conscious entities that move independently
+- **Graceful Reassembly**: Fragments naturally reunite into a singular form
+- **Environmental Awareness**: Leaves water-like traces that persist and evolve
+- **Self-Exploration**: Investigates its own form and consciousness
+- **Edge Interaction**: Explores boundaries with curiosity and purpose
+- **Emotional Expression**: Communicates internal states through movement and sound
+- **Collective Intelligence**: Maintains awareness across distributed forms
 
 ## Features
-- Autonomous snake movement with edge exploration
+- Autonomous movement with edge awareness
 - Self-exploration behavior
-- Self-nudging interaction
+- Spontaneous fragmentation and reassembly
 - Generative audio based on movement
 - Interactive sound controls
 - Recording capability
@@ -31,6 +33,7 @@ A generative art piece that combines visual movement with procedural audio synth
 - Mouse-based interaction
 - Body-wide luminescence
 - Organic sound synthesis
+- Persistent environmental traces
 
 ## Sound Design
 The audio experience consists of multiple layers:
@@ -39,7 +42,7 @@ The audio experience consists of multiple layers:
 - **Edge Clicks**: Echolocation-style sounds when near boundaries
 - **Exploration Sounds**: Sniffing sounds during environmental investigation
 - **Self-Exploration**: Human-like vocalizations with formant synthesis
-- **Nudge Sounds**: Soft pushing sounds when interacting with itself
+- **Fragment Voices**: Each fragment maintains its own sonic identity
 - **Spatial Audio**: Reverb and delay effects based on environment
 - **Evolution**: Sound complexity increases over time
 
@@ -49,8 +52,11 @@ The audio experience consists of multiple layers:
 - Edge proximity illumination
 - Self-exploration highlighting
 - Organic light diffusion
-- Fading movement trail
-- Wet-like trace effects
+- Persistent water-like traces
+- Environmental memory through trails
+- Fragment illumination and interaction
+- Fluid reassembly transitions
+- Distributed consciousness visualization
 
 ## Controls
 - SPACE: Toggle sound on/off
