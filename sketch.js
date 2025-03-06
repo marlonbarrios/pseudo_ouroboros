@@ -187,6 +187,15 @@ let absorptionParticles = [];
 let edgeBuffer = 100;  // Distance from edge to start containment
 let edgeForce = 0.2;   // Strength of edge repulsion
 
+// Add these variables at the top
+let harmonicFreqs = [1, 1.5, 2, 2.5, 3];  // Harmonic series
+let soundModulation = 0;
+let baseFrequency = 220;  // A3 note
+let harmonicGains = [];   // Store gains for each harmonic
+let lastNoteChange = 0;
+let noteChangeInterval = 2000; // Change base note every 2 seconds
+let scaleNotes = [220, 247.5, 261.63, 293.66, 329.63, 349.23, 392]; // A minor scale
+
 function windowResized() {
 	resizeCanvas(windowWidth, windowHeight);
 	// Adjust snake properties based on new canvas size
@@ -1295,24 +1304,14 @@ function makeSniffingSound(intensity) {
 	if (currentTime - lastSoundTime < 50) return;  // Minimum time between sniffs
 	lastSoundTime = currentTime;
 	
-	// Base sniffing sound
-	let sniffFreq = map(intensity, 0, 80, 200, 400);
-	let sniffDuration = map(intensity, 0, 80, 0.1, 0.05);
+	// Varied sniffing sounds
+	let baseFreq = random(600, 1200);
+	let modFreq = random(0.8, 1.2);
 	
-	// Create quick envelope for sniff sound
-	osc.freq(sniffFreq);
-	osc.amp(0.2, 0.01);
-	
-	// Add filter sweep
-	filter.freq(map(intensity, 0, 80, 2000, 4000));
-	filter.res(8);  // Higher resonance for sniffs
-	
-	// Quick release
-	setTimeout(() => {
-		if (soundEnabled) {
-			osc.amp(0, 0.05);
-		}
-	}, sniffDuration * 1000);
+	clickOsc.freq(baseFreq * modFreq);
+	clickEnv.setRange(0.2 * intensity, 0);
+	clickEnv.setADSR(0.01, 0.05 * random(0.8, 1.2), 0, 0.02);
+	clickEnv.play();
 }
 
 // Add this function to update drone sounds
@@ -1777,5 +1776,72 @@ function cleanupResources() {
 		nutrients = [];
 		foldingNutrients = false;
 		isProcessingCluster = false;
+	}
+}
+
+// Update setupAudio function
+function setupAudio() {
+	// Initialize harmonic oscillators
+	harmonics = harmonicFreqs.map(freq => {
+		let osc = new p5.Oscillator('sine');
+		osc.freq(baseFrequency * freq);
+		osc.amp(0);
+		osc.start();
+		return osc;
+	});
+	
+	harmonicGains = harmonicFreqs.map(() => random(0.1, 0.3));
+	
+	// More varied drone settings
+	droneOsc1.freq(baseFrequency / 2);
+	droneOsc2.freq(baseFrequency / 2 * 1.01); // Slight detuning
+	
+	// More dynamic filter
+	droneFilter.freq(1200);
+	droneFilter.res(8);
+}
+
+// Update sound generation in draw()
+function updateSound() {
+	if (!soundEnabled) return;
+	
+	// Update sound modulation
+	soundModulation = noise(frameCount * 0.01) * 2;
+	
+	// Change base note occasionally
+	if (millis() - lastNoteChange > noteChangeInterval) {
+		baseFrequency = random(scaleNotes);
+		lastNoteChange = millis();
+	}
+	
+	// Update harmonics
+	harmonics.forEach((osc, i) => {
+		let speed = map(abs(velocityHistory[0]), 0, 10, 0.1, 1);
+		let turn = map(abs(turnAmount), 0, PI/2, 0.1, 1);
+		
+		// Dynamic frequency modulation
+		let freqMod = 1 + sin(frameCount * 0.01 + i) * 0.02;
+		osc.freq(baseFrequency * harmonicFreqs[i] * freqMod);
+		
+		// Dynamic amplitude modulation
+		let ampMod = (1 + sin(frameCount * 0.02 + i * PI/3)) * 0.5;
+		let amp = speed * turn * harmonicGains[i] * ampMod * soundModulation;
+		osc.amp(amp * 0.2, 0.1);
+	});
+	
+	// Update drone sounds
+	let droneFreqMod = 1 + sin(frameCount * 0.005) * 0.01;
+	droneOsc1.freq(baseFrequency / 2 * droneFreqMod);
+	droneOsc2.freq(baseFrequency / 2 * 1.01 * droneFreqMod);
+	
+	// Dynamic filter modulation
+	let filterFreq = map(noise(frameCount * 0.01), 0, 1, 800, 2400);
+	droneFilter.freq(filterFreq);
+	
+	// Update edge exploration sounds
+	if (edgeExploring) {
+		let edgeFreq = map(edgeIntensity, 0, 1, 400, 1200);
+		clickOsc.freq(edgeFreq);
+		clickEnv.setRange(0.2 * edgeIntensity, 0);
 	}
 }
