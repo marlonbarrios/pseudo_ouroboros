@@ -183,6 +183,10 @@ let maxProcessingTime = 16; // Max ms for processing
 let nutrientGlowIntensity = 2.0; // Brighter glow
 let absorptionParticles = [];
 
+// Add these variables at the top
+let edgeBuffer = 100;  // Distance from edge to start containment
+let edgeForce = 0.2;   // Strength of edge repulsion
+
 function windowResized() {
 	resizeCanvas(windowWidth, windowHeight);
 	// Adjust snake properties based on new canvas size
@@ -546,6 +550,58 @@ function draw() {
 			edgeExploring = false;
 		}
 		
+		// Add edge containment before updating position
+		let head = segments[0];
+		let containmentForce = createVector(0, 0);
+		
+		// Left edge
+		if (head.x < edgeBuffer) {
+			containmentForce.x += edgeForce * (edgeBuffer - head.x) / edgeBuffer;
+		}
+		// Right edge
+		if (head.x > width - edgeBuffer) {
+			containmentForce.x -= edgeForce * (head.x - (width - edgeBuffer)) / edgeBuffer;
+		}
+		// Top edge
+		if (head.y < edgeBuffer) {
+			containmentForce.y += edgeForce * (edgeBuffer - head.y) / edgeBuffer;
+		}
+		// Bottom edge
+		if (head.y > height - edgeBuffer) {
+			containmentForce.y -= edgeForce * (head.y - (height - edgeBuffer)) / edgeBuffer;
+		}
+		
+		// Apply containment force to target position
+		targetX += containmentForce.x * 10;
+		targetY += containmentForce.y * 10;
+		
+		// Ensure target stays within bounds
+		targetX = constrain(targetX, edgeBuffer, width - edgeBuffer);
+		targetY = constrain(targetY, edgeBuffer, height - edgeBuffer);
+		
+		// Update segment positions with edge awareness
+		for (let i = 0; i < segments.length; i++) {
+			let segment = segments[i];
+			
+			// Add edge repulsion to each segment
+			if (segment.x < edgeBuffer) {
+				segment.x += edgeForce * 2;
+			}
+			if (segment.x > width - edgeBuffer) {
+				segment.x -= edgeForce * 2;
+			}
+			if (segment.y < edgeBuffer) {
+				segment.y += edgeForce * 2;
+			}
+			if (segment.y > height - edgeBuffer) {
+				segment.y -= edgeForce * 2;
+			}
+			
+			// Ensure segments stay within bounds
+			segment.x = constrain(segment.x, 0, width);
+			segment.y = constrain(segment.y, 0, height);
+		}
+		
 		// Add organic movement with minimum intensity
 		let noiseIntensity = map(speedMultiplier, 0.1, 3, 0.5, 2);
 		noiseIntensity = max(noiseIntensity, 0.2);  // Ensure minimum noise movement
@@ -581,7 +637,6 @@ function draw() {
 		}
 		
 		// Calculate edge proximity glow
-		let head = segments[0];
 		let edgeProximity = min(
 			head.x,  // Distance from left
 			width - head.x,  // Distance from right
@@ -638,7 +693,6 @@ function draw() {
 			nutrient.y += cos(frameCount * 0.03 + i) * 0.5;
 			
 			// More dramatic absorption effect
-			let head = segments[0];
 			let d = dist(head.x, head.y, nutrient.x, nutrient.y);
 			
 			if (d < reabsorptionRadius) {
