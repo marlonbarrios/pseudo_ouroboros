@@ -188,13 +188,78 @@ let edgeBuffer = 100;  // Distance from edge to start containment
 let edgeForce = 0.2;   // Strength of edge repulsion
 
 // Add these variables at the top
-let harmonicFreqs = [1, 1.5, 2, 2.5, 3];  // Harmonic series
-let soundModulation = 0;
-let baseFrequency = 220;  // A3 note
-let harmonicGains = [];   // Store gains for each harmonic
-let lastNoteChange = 0;
-let noteChangeInterval = 2000; // Change base note every 2 seconds
-let scaleNotes = [220, 247.5, 261.63, 293.66, 329.63, 349.23, 392]; // A minor scale
+let evolutionLevel = 0;          // Current evolution stage
+let maxEvolution = 5;            // Maximum evolution level
+let growthFactor = 1.0;         // Size multiplier
+let colorEvolution = 0;         // Color complexity
+let soundEvolution = 0;         // Sound evolution
+let lastTouchTime = 0;          // Time tracking for touches
+let touchCooldown = 1000;       // Minimum time between evolutions
+
+// Add these variables at the top
+let foodParticles = [];
+let attractionForce = 0.5;
+let foodRadius = 15;
+let maxFoodParticles = 50;
+let foodAttractionRadius = 200;
+
+// Add these variables at the top
+let organismSize = 1.0;          // Base size that grows with feeding
+let maxOrganismSize = 2.5;      // Maximum growth limit
+let digestionEnergy = 0;        // Energy from eating
+let energyDecayRate = 0.001;    // How fast energy depletes
+let particleNutrition = 0.05;   // How much each particle contributes to growth
+
+// Add these variables at the top
+let eatSound;
+let digestSound;
+let growthSound;
+let lastEatSound = 0;
+let minEatSoundInterval = 200;  // Minimum time between eat sounds
+let digestPitch = 1.0;         // Base pitch for digest sounds
+let growthPitch = 220;        // Base frequency for growth sounds
+
+// Add these variables at the top
+let spawnParticles = [];         // Particles for spawn effect
+let spawnSound;                  // Sound for spawning food
+let spawnReverb;                // Reverb for spawn sound
+let lastSpawnPitch = 440;       // Track pitch for variation
+let spawnRadius = 100;          // Size of spawn effect
+
+// Add these variables at the top
+let technoSynth;
+let technoLFO;
+let technoDelay;
+let technoFilter;
+let baseBeat = 0;
+let beatPattern = [1, 0, 0.5, 0, 1, 0.3, 0, 0.7];
+let beatIndex = 0;
+let lastBeatTime = 0;
+let beatInterval = 200; // 120 BPM
+let filterSweep = 0;
+
+// Add these variables at the top
+let rhythmState = {
+    mainBeat: [1, 0, 0.7, 0, 1, 0, 0.7, 0.3],  // Basic kick pattern
+    subBeat: [0.3, 0.5, 0, 0.4, 0.3, 0.5, 0, 0.4],  // Hi-hat pattern
+    bassline: [1, 0, 0.8, 0.4, 0.6, 0, 0.7, 0.4],  // Acid bass pattern
+    percs: [0, 0.4, 0, 0.3, 0, 0.4, 0.3, 0],  // Industrial percussion
+    acid: [0.7, 0, 0.5, 0, 0.7, 0, 0.5, 0],   // Acid synth sequence
+    evolution: 0,
+    complexity: 0,
+    tension: 0,
+    lastPatternChange: 0,
+    patternDuration: 4000,  // Faster pattern changes
+    currentScale: [220, 233.08, 277.18, 293.66, 329.63, 369.99, 415.30], // Industrial scale
+    bassNote: 110,
+    acidCutoff: 0,
+    resonance: 5
+};
+
+// Add these variables at the top
+let intersectionSegments = [];  // Store intersection segments
+let maxSegments = 20;          // Maximum number of stored segments
+let segmentLifespan = 1000;    // How long segments stay visible (in milliseconds)
 
 function windowResized() {
 	resizeCanvas(windowWidth, windowHeight);
@@ -356,6 +421,41 @@ function setup() {
 		trail.push(createVector(0, 0));
 		trailOpacity.push(0);
 	}
+	
+	// Initialize eating sound components
+	eatSound = new p5.Oscillator('sine');
+	eatSound.disconnect();
+	eatSound.connect(filter);
+	
+	digestSound = new p5.Oscillator('triangle');
+	digestSound.disconnect();
+	digestSound.connect(filter);
+	
+	growthSound = new p5.Oscillator('sine');
+	growthSound.disconnect();
+	growthSound.connect(reverb);
+	
+	// Initialize spawn sound
+	spawnSound = new p5.Oscillator('sine');
+	spawnReverb = new p5.Reverb();
+	spawnSound.disconnect();
+	spawnSound.connect(spawnReverb);
+	spawnReverb.set(3, 2); // Long, spacious reverb
+	
+	// Initialize techno sound components
+	technoSynth = new p5.Oscillator('sawtooth');
+	technoLFO = new p5.Oscillator('sine');
+	technoDelay = new p5.Delay();
+	technoFilter = new p5.Filter();
+	
+	// Configure effects
+	technoSynth.disconnect();
+	technoSynth.connect(technoFilter);
+	technoFilter.connect(technoDelay);
+	technoDelay.process(technoSynth, 0.3, 0.7, 2300);
+	technoDelay.setType('pingPong');
+	technoFilter.freq(1000);
+	technoFilter.res(5);
 }
 
 function draw() {
@@ -1008,6 +1108,24 @@ function draw() {
 			}
 		}
 		
+		// Update and draw food particles
+		updateFoodParticles();
+		
+		// Update digestion effects
+		updateDigestionEffects();
+		
+		// Add food attraction behavior
+		if (foodParticles.length > 0) {
+			attractToFood();
+		}
+		
+		updateSpawnEffects();
+		
+		// Update ambient sound
+		updateAmbientSound();
+		
+		drawIntersectionSegments();
+		
 	} catch (e) {
 		console.error('Draw error:', e);
 		// Reset critical states
@@ -1304,14 +1422,24 @@ function makeSniffingSound(intensity) {
 	if (currentTime - lastSoundTime < 50) return;  // Minimum time between sniffs
 	lastSoundTime = currentTime;
 	
-	// Varied sniffing sounds
-	let baseFreq = random(600, 1200);
-	let modFreq = random(0.8, 1.2);
+	// Base sniffing sound
+	let sniffFreq = map(intensity, 0, 80, 200, 400);
+	let sniffDuration = map(intensity, 0, 80, 0.1, 0.05);
 	
-	clickOsc.freq(baseFreq * modFreq);
-	clickEnv.setRange(0.2 * intensity, 0);
-	clickEnv.setADSR(0.01, 0.05 * random(0.8, 1.2), 0, 0.02);
-	clickEnv.play();
+	// Create quick envelope for sniff sound
+	osc.freq(sniffFreq);
+	osc.amp(0.2, 0.01);
+	
+	// Add filter sweep
+	filter.freq(map(intensity, 0, 80, 2000, 4000));
+	filter.res(8);  // Higher resonance for sniffs
+	
+	// Quick release
+	setTimeout(() => {
+		if (soundEnabled) {
+			osc.amp(0, 0.05);
+		}
+	}, sniffDuration * 1000);
 }
 
 // Add this function to update drone sounds
@@ -1779,69 +1907,711 @@ function cleanupResources() {
 	}
 }
 
-// Update setupAudio function
-function setupAudio() {
-	// Initialize harmonic oscillators
-	harmonics = harmonicFreqs.map(freq => {
-		let osc = new p5.Oscillator('sine');
-		osc.freq(baseFrequency * freq);
-		osc.amp(0);
-		osc.start();
-		return osc;
-	});
+// Add this function to handle evolution
+function evolveOrganism(touchPoint) {
+	let currentTime = millis();
+	if (currentTime - lastTouchTime < touchCooldown) return;
+	lastTouchTime = currentTime;
 	
-	harmonicGains = harmonicFreqs.map(() => random(0.1, 0.3));
+	// Increment evolution
+	evolutionLevel = min(evolutionLevel + 0.2, maxEvolution);
+	growthFactor = 1.0 + (evolutionLevel * 0.15); // Grow up to 75% larger
+	colorEvolution = min(colorEvolution + 0.15, 1.0);
+	soundEvolution = min(soundEvolution + 0.1, 1.0);
 	
-	// More varied drone settings
-	droneOsc1.freq(baseFrequency / 2);
-	droneOsc2.freq(baseFrequency / 2 * 1.01); // Slight detuning
+	// Update sound parameters
+	baseFrequency = lerp(220, 440, soundEvolution);
+	harmonicGains = harmonicGains.map(g => g * (1 + soundEvolution * 0.2));
 	
-	// More dynamic filter
-	droneFilter.freq(1200);
-	droneFilter.res(8);
+	// Create evolution particles
+	for (let i = 0; i < 15; i++) {
+		let angle = random(TWO_PI);
+		let speed = random(2, 5);
+		absorptionParticles.push({
+			x: touchPoint.x,
+			y: touchPoint.y,
+			vx: cos(angle) * speed,
+			vy: sin(angle) * speed,
+			life: 1,
+			color: color(
+				200 + random(-20, 20) * colorEvolution,
+				220 + random(-20, 20) * colorEvolution,
+				255 + random(-20, 20) * colorEvolution,
+				200
+			)
+		});
+	}
 }
 
-// Update sound generation in draw()
+// Update the segment drawing code in draw()
+function drawSegments() {
+	for (let i = 0; i < segments.length; i++) {
+		let segment = segments[i];
+		let progress = i / segments.length;
+		
+		// Calculate size with growth factor
+		let size = segmentLength * organismSize * growthFactor;
+		
+		// Enhanced color based on size and energy
+		let energyPulse = sin(frameCount * 0.05) * 0.5 + 0.5;
+		let r = 200 + (organismSize - 1) * 30 + digestionEnergy * 20 * energyPulse;
+		let g = 220 + (organismSize - 1) * 25 + digestionEnergy * 15 * energyPulse;
+		let b = 255 + (organismSize - 1) * 20 + digestionEnergy * 10 * energyPulse;
+		
+		// Draw enhanced glow
+		noStroke();
+		for (let j = 3; j > 0; j--) {
+			let glowSize = size * (1 + j * 0.4 * (1 + digestionEnergy * 0.2));
+			let alpha = map(j, 3, 0, 30, 150) * (1 + digestionEnergy * 0.5);
+			fill(r, g, b, alpha);
+			circle(segment.x, segment.y, glowSize);
+		}
+		
+		// Draw segment core
+		fill(r, g, b, 200);
+		circle(segment.x, segment.y, size);
+	}
+	
+	// Decay energy over time
+	digestionEnergy = max(0, digestionEnergy - energyDecayRate);
+}
+
+// Update checkSelfIntersection function
+function checkSelfIntersection() {
+    let head = segments[0];
+    for (let i = 5; i < segments.length; i++) {
+        let segment = segments[i];
+        let d = dist(head.x, head.y, segment.x, segment.y);
+        if (d < segmentLength * 0.5) {
+            // Create intersection segment
+            createIntersectionSegment(head.x, head.y, segment.x, segment.y);
+            
+            // Trigger evolution and other effects
+            evolveOrganism(head);
+            headGlow = maxGlow * 2;
+            break;
+        }
+    }
+}
+
+// Add this new function to create intersection segments
+function createIntersectionSegment(x1, y1, x2, y2) {
+    let segment = {
+        x1: x1,
+        y1: y1,
+        x2: x2,
+        y2: y2,
+        birth: millis(),
+        alpha: 255,
+        thickness: random(2, 5),
+        color: color(
+            200 + random(-20, 20) * colorEvolution,
+            220 + random(-20, 20) * colorEvolution,
+            255 + random(-20, 20) * colorEvolution
+        ),
+        // Add some variation to segment
+        offset: random(TWO_PI),
+        amplitude: random(5, 15),
+        frequency: random(0.01, 0.03)
+    };
+    
+    intersectionSegments.push(segment);
+    
+    // Limit number of segments
+    if (intersectionSegments.length > maxSegments) {
+        intersectionSegments.shift();
+    }
+}
+
+// Add this function to draw the segments
+function drawIntersectionSegments() {
+    let currentTime = millis();
+    
+    for (let i = intersectionSegments.length - 1; i >= 0; i--) {
+        let seg = intersectionSegments[i];
+        let age = currentTime - seg.birth;
+        
+        if (age > segmentLifespan) {
+            intersectionSegments.splice(i, 1);
+            continue;
+        }
+        
+        // Calculate fade based on age
+        let fadeProgress = age / segmentLifespan;
+        seg.alpha = map(fadeProgress, 0, 1, 255, 0);
+        
+        // Draw glowing segment
+        for (let j = 3; j > 0; j--) {
+            let glowAlpha = seg.alpha * (j/3) * 0.5;
+            let glowThickness = seg.thickness * (j * 2);
+            
+            // Add wavey effect
+            let wave = sin(frameCount * seg.frequency + seg.offset) * seg.amplitude;
+            let dx = wave * sin(atan2(seg.y2 - seg.y1, seg.x2 - seg.x1) + PI/2);
+            let dy = wave * cos(atan2(seg.y2 - seg.y1, seg.x2 - seg.x1) + PI/2);
+            
+            strokeWeight(glowThickness);
+            seg.color.setAlpha(glowAlpha);
+            stroke(seg.color);
+            noFill();
+            
+            // Draw curved line
+            beginShape();
+            vertex(seg.x1 + dx, seg.y1 + dy);
+            let midX = (seg.x1 + seg.x2)/2 + dx*1.5;
+            let midY = (seg.y1 + seg.y2)/2 + dy*1.5;
+            quadraticVertex(midX, midY, seg.x2 + dx, seg.y2 + dy);
+            endShape();
+        }
+    }
+}
+
+// Update checkSelfIntersection function
+function checkSelfIntersection() {
+	let head = segments[0];
+	for (let i = 5; i < segments.length; i++) {
+		let segment = segments[i];
+		let d = dist(head.x, head.y, segment.x, segment.y);
+		if (d < segmentLength * 0.5) {
+			evolveOrganism(head);
+			headGlow = maxGlow * 2;
+			break;
+		}
+	}
+}
+
+// Update updateSound function to include evolution
 function updateSound() {
 	if (!soundEnabled) return;
 	
-	// Update sound modulation
-	soundModulation = noise(frameCount * 0.01) * 2;
+	// Evolve sound characteristics
+	let evolvedFreq = baseFrequency * (1 + soundEvolution * 0.5);
+	let evolvedDepth = 0.2 + (soundEvolution * 0.3);
 	
-	// Change base note occasionally
-	if (millis() - lastNoteChange > noteChangeInterval) {
-		baseFrequency = random(scaleNotes);
-		lastNoteChange = millis();
-	}
-	
-	// Update harmonics
 	harmonics.forEach((osc, i) => {
-		let speed = map(abs(velocityHistory[0]), 0, 10, 0.1, 1);
-		let turn = map(abs(turnAmount), 0, PI/2, 0.1, 1);
+		let freqMod = 1 + sin(frameCount * 0.01 + i) * (0.02 + soundEvolution * 0.03);
+		osc.freq(evolvedFreq * harmonicFreqs[i] * freqMod);
 		
-		// Dynamic frequency modulation
-		let freqMod = 1 + sin(frameCount * 0.01 + i) * 0.02;
-		osc.freq(baseFrequency * harmonicFreqs[i] * freqMod);
-		
-		// Dynamic amplitude modulation
 		let ampMod = (1 + sin(frameCount * 0.02 + i * PI/3)) * 0.5;
-		let amp = speed * turn * harmonicGains[i] * ampMod * soundModulation;
+		let amp = speedMultiplier * harmonicGains[i] * ampMod * evolvedDepth;
 		osc.amp(amp * 0.2, 0.1);
 	});
 	
-	// Update drone sounds
-	let droneFreqMod = 1 + sin(frameCount * 0.005) * 0.01;
-	droneOsc1.freq(baseFrequency / 2 * droneFreqMod);
-	droneOsc2.freq(baseFrequency / 2 * 1.01 * droneFreqMod);
-	
-	// Dynamic filter modulation
-	let filterFreq = map(noise(frameCount * 0.01), 0, 1, 800, 2400);
-	droneFilter.freq(filterFreq);
-	
-	// Update edge exploration sounds
-	if (edgeExploring) {
-		let edgeFreq = map(edgeIntensity, 0, 1, 400, 1200);
-		clickOsc.freq(edgeFreq);
-		clickEnv.setRange(0.2 * edgeIntensity, 0);
+	// Add digestion ambience
+	if (digestionEnergy > 0) {
+		let digestAmp = map(digestionEnergy, 0, 1, 0, 0.1);
+		let digestFreq = map(digestionEnergy, 0, 1, 220, 440);
+		
+		digestSound.freq(digestFreq + sin(frameCount * 0.1) * 20);
+		digestSound.amp(digestAmp);
+		
+		// Gradually lower pitch as digestion happens
+		digestPitch = max(1.0, digestPitch - 0.001);
 	}
+	
+	// Add growth ambience
+	if (organismSize > 1.0) {
+		let growthAmp = map(organismSize, 1, maxOrganismSize, 0, 0.15);
+		growthSound.freq(growthPitch + sin(frameCount * 0.05) * 10);
+		growthSound.amp(growthAmp * (1 + sin(frameCount * 0.02) * 0.2));
+	}
+}
+
+// Add these new functions
+function mousePressed() {
+	if (!mouseIsPressed) return;
+	
+	// Create dramatic spawn effect
+	let spawnColor = color(200 + random(-20, 20), 
+						  220 + random(-20, 20), 
+						  255 + random(-20, 20));
+	
+	// Create expanding rings
+	for (let i = 0; i < 3; i++) {
+		spawnParticles.push({
+			x: mouseX,
+			y: mouseY,
+			radius: 10,
+			maxRadius: spawnRadius * (1 + i * 0.5),
+			alpha: 255,
+			color: spawnColor,
+			delay: i * 100
+		});
+	}
+	
+	// Create food particles with more variation
+	for (let i = 0; i < 5; i++) {
+		let angle = random(TWO_PI);
+		let dist = random(20, 50);
+		let spawnDelay = i * 100; // Stagger spawn times
+		
+		setTimeout(() => {
+			foodParticles.push({
+				x: mouseX + cos(angle) * dist,
+				y: mouseY + sin(angle) * dist,
+				size: random(8, 15),
+				color: color(
+					random(180, 220),
+					random(200, 240),
+					random(220, 255),
+					200
+				),
+				age: 0,
+				maxAge: random(300, 600),
+				wiggleOffset: random(1000),
+				spawnTime: millis(),
+				initialSize: 0 // Start small and grow
+			});
+		}, spawnDelay);
+	}
+	
+	// Play spawn sound
+	if (soundEnabled) {
+		// Create interesting spawn sound
+		lastSpawnPitch = constrain(lastSpawnPitch + random(-50, 50), 330, 550);
+		spawnSound.freq(lastSpawnPitch);
+		spawnSound.amp(0);
+		spawnSound.start();
+		spawnSound.amp(0.2, 0.05); // Quick attack
+		
+		// Create descending chime effect
+		for (let i = 0; i < 3; i++) {
+			setTimeout(() => {
+				spawnSound.freq(lastSpawnPitch * (1 - i * 0.2));
+				spawnSound.amp(0.15 / (i + 1), 0.05);
+			}, i * 100);
+		}
+		
+		// Fade out
+		setTimeout(() => {
+			spawnSound.amp(0, 0.2);
+		}, 500);
+	}
+	
+	// Limit total particles
+	if (foodParticles.length > maxFoodParticles) {
+		foodParticles.splice(0, foodParticles.length - maxFoodParticles);
+	}
+}
+
+function updateFoodParticles() {
+	for (let i = foodParticles.length - 1; i >= 0; i--) {
+		let food = foodParticles[i];
+		
+		// Grow particles from spawn
+		if (millis() - food.spawnTime < 500) {
+			food.size = map(millis() - food.spawnTime, 0, 500, 0, random(8, 15));
+		}
+		
+		// Add gentle floating movement
+		food.x += sin(frameCount * 0.05 + food.wiggleOffset) * 0.5;
+		food.y += cos(frameCount * 0.05 + food.wiggleOffset) * 0.5;
+		
+		// Draw food particle with enhanced glow
+		noStroke();
+		for (let j = 3; j > 0; j--) {
+			let glowSize = food.size * (1 + j * 0.5);
+			let alpha = map(j, 3, 0, 30, 200);
+			food.color.setAlpha(alpha);
+			fill(food.color);
+			circle(food.x, food.y, glowSize);
+		}
+		
+		// Check if eaten
+		let d = dist(food.x, food.y, segments[0].x, segments[0].y);
+		let eatRadius = segmentLength * organismSize;
+		
+		if (d < eatRadius) {
+			// Grow from eating
+			organismSize = min(organismSize + particleNutrition, maxOrganismSize);
+			digestionEnergy += particleNutrition * 2;
+			
+			// Create more dramatic absorption effect
+			for (let j = 0; j < 12; j++) {
+				let angle = random(TWO_PI);
+				let speed = random(2, 6);
+				absorptionParticles.push({
+					x: food.x,
+					y: food.y,
+					vx: cos(angle) * speed,
+					 vy: sin(angle) * speed,
+					life: 1,
+					size: random(4, 8) * organismSize,
+					color: lerpColor(
+						food.color,
+						color(255, 255, 255),
+						random(0.2, 0.4)
+					)
+				});
+			}
+			
+			// Remove eaten food
+			foodParticles.splice(i, 1);
+			
+			// Enhanced visual feedback
+			headGlow = maxGlow * 2;
+			createDigestionEffect(food.x, food.y);
+			
+			// Trigger evolution with accumulated energy
+			if (digestionEnergy > 1) {
+				evolveOrganism({x: food.x, y: food.y});
+				digestionEnergy *= 0.5; // Consume some energy for evolution
+			}
+			
+			// Play eating sound
+			if (soundEnabled && millis() - lastEatSound > minEatSoundInterval) {
+				// Quick eating sound
+				eatSound.freq(440 + random(-50, 50));
+				eatSound.amp(0.2, 0.01);
+				eatSound.start();
+				setTimeout(() => eatSound.amp(0, 0.1), 100);
+				
+				// Digestion sound
+				digestSound.freq(220 * digestPitch);
+				digestSound.amp(0.1, 0.1);
+				digestSound.start();
+				digestPitch = constrain(digestPitch + 0.05, 1.0, 2.0);
+				setTimeout(() => digestSound.amp(0, 0.2), 300);
+				
+				// Growth sound when size increases
+				if (organismSize > 1.0) {
+					growthSound.freq(growthPitch * (1 + (organismSize - 1) * 0.5));
+					growthSound.amp(0.15, 0.1);
+					growthSound.start();
+					setTimeout(() => growthSound.amp(0, 0.3), 500);
+					growthPitch = constrain(growthPitch + 10, 220, 440);
+				}
+				
+				lastEatSound = millis();
+			}
+		}
+	}
+}
+
+function attractToFood() {
+	let head = segments[0];
+	let closestFood = null;
+	let closestDist = foodAttractionRadius;
+	
+	// Find closest food particle
+	for (let food of foodParticles) {
+		let d = dist(head.x, head.y, food.x, food.y);
+		if (d < closestDist) {
+			closestDist = d;
+			closestFood = food;
+		}
+	}
+	
+	// Attract to closest food
+	if (closestFood) {
+		let attraction = createVector(
+			closestFood.x - head.x,
+			closestFood.y - head.y
+		);
+		
+		// Scale attraction based on distance
+		let strength = map(closestDist, 0, foodAttractionRadius, attractionForce, 0);
+		attraction.setMag(strength);
+		
+		// Apply attraction to target
+		targetX += attraction.x * 10;
+		targetY += attraction.y * 10;
+		
+		// Draw attraction effect
+		stroke(200, 220, 255, 50);
+		strokeWeight(1);
+		line(head.x, head.y, closestFood.x, closestFood.y);
+		
+		// Increase movement speed when near food
+		speedMultiplier = map(closestDist, 0, foodAttractionRadius, 1.5, 1);
+	}
+}
+
+// Add this function for digestion effects
+function createDigestionEffect(x, y) {
+	// Create expanding ring effect
+	let ringCount = 8;
+	for (let i = 0; i < ringCount; i++) {
+		setTimeout(() => {
+			let ring = {
+				x: x,
+				y: y,
+				radius: segmentLength * 0.5,
+				maxRadius: segmentLength * 2,
+				alpha: 255,
+				color: color(220, 240, 255)
+			};
+			
+			// Add to existing particles array or create new one
+			if (!window.digestionRings) window.digestionRings = [];
+			window.digestionRings.push(ring);
+		}, i * 50);
+	}
+}
+
+// Add this to draw function to update digestion effects
+function updateDigestionEffects() {
+	if (!window.digestionRings) return;
+	
+	for (let i = window.digestionRings.length - 1; i >= 0; i--) {
+		let ring = window.digestionRings[i];
+		
+		// Draw expanding ring
+		noFill();
+		stroke(ring.color.levels[0], ring.color.levels[1], 
+			   ring.color.levels[2], ring.alpha);
+		strokeWeight(2);
+		circle(ring.x, ring.y, ring.radius * 2);
+		
+		// Update ring
+		ring.radius += (ring.maxRadius - ring.radius) * 0.1;
+		ring.alpha *= 0.9;
+		
+		// Remove faded rings
+		if (ring.alpha < 5) {
+			window.digestionRings.splice(i, 1);
+		}
+	}
+}
+
+// Add cleanup to stop sounds
+function cleanup() {
+	if (eatSound) eatSound.stop();
+	if (digestSound) digestSound.stop();
+	if (growthSound) growthSound.stop();
+}
+
+// Add this function to update spawn effects
+function updateSpawnEffects() {
+	// Update and draw spawn particles
+	for (let i = spawnParticles.length - 1; i >= 0; i--) {
+		let p = spawnParticles[i];
+		
+		if (frameCount % 2 === 0 && millis() > p.delay) {
+			// Expand rings
+			p.radius += (p.maxRadius - p.radius) * 0.1;
+			p.alpha *= 0.95;
+			
+			// Draw expanding ring
+			noFill();
+			p.color.setAlpha(p.alpha);
+			stroke(p.color);
+			strokeWeight(2);
+			circle(p.x, p.y, p.radius * 2);
+			
+			// Draw connecting lines between rings
+			if (i > 0) {
+				let prev = spawnParticles[i - 1];
+				let lerpAmount = 0.5 + sin(frameCount * 0.1) * 0.2;
+				let midX = lerp(p.x, prev.x, lerpAmount);
+				let midY = lerp(p.y, prev.y, lerpAmount);
+				
+				strokeWeight(1);
+				p.color.setAlpha(p.alpha * 0.5);
+				stroke(p.color);
+				line(p.x, p.y, midX, midY);
+			}
+			
+			// Remove faded particles
+			if (p.alpha < 5) {
+				spawnParticles.splice(i, 1);
+			}
+		}
+	}
+}
+
+// Update the sound generation for eating
+function playEatingSound(food) {
+    if (!soundEnabled || millis() - lastEatSound < minEatSoundInterval) return;
+    
+    let currentTime = millis();
+    lastEatSound = currentTime;
+    
+    // Evolve rhythm over time
+    rhythmState.evolution = min(rhythmState.evolution + 0.05, 1);
+    rhythmState.complexity = min(rhythmState.complexity + 0.02, 1);
+    
+    // Change patterns periodically
+    if (currentTime - rhythmState.lastPatternChange > rhythmState.patternDuration) {
+        evolveRhythmPattern();
+        rhythmState.lastPatternChange = currentTime;
+    }
+    
+    // Generate layered techno beat
+    if (currentTime - lastBeatTime > beatInterval) {
+        beatIndex = (beatIndex + 1) % rhythmState.mainBeat.length;
+        lastBeatTime = currentTime;
+        
+        // Main beat
+        if (rhythmState.mainBeat[beatIndex] > 0) {
+            playTechnoHit(
+                map(organismSize, 1, maxOrganismSize, 220, 440),
+                rhythmState.mainBeat[beatIndex] * 0.2,
+                'high'
+            );
+        }
+        
+        // Sub beat
+        if (rhythmState.subBeat[beatIndex] > 0 && rhythmState.complexity > 0.3) {
+            playTechnoHit(
+                map(organismSize, 1, maxOrganismSize, 330, 660),
+                rhythmState.subBeat[beatIndex] * 0.15,
+                'mid'
+            );
+        }
+        
+        // Bassline
+        if (rhythmState.bassline[beatIndex] > 0 && rhythmState.evolution > 0.2) {
+            playTechnoHit(
+                rhythmState.bassNote,
+                rhythmState.bassline[beatIndex] * 0.25,
+                'bass'
+            );
+        }
+        
+        // Add tension modulation
+        rhythmState.tension = sin(currentTime * 0.001) * 0.5 + 0.5;
+    }
+}
+
+// Add this function to handle individual techno hits
+function playTechnoHit(baseFreq, amplitude, type) {
+    let freq = baseFreq;
+    let filterFreq, resonance, decay;
+    
+    switch(type) {
+        case 'high':
+            filterFreq = map(rhythmState.tension, 0, 1, 3000, 8000);
+            resonance = map(rhythmState.evolution, 0, 1, 8, 20);
+            decay = 0.08;  // Shorter decay for tighter sound
+            break;
+        case 'mid':
+            filterFreq = map(rhythmState.tension, 0, 1, 1000, 4000);
+            resonance = map(rhythmState.evolution, 0, 1, 5, 12);
+            decay = 0.15;
+            break;
+        case 'bass':
+            filterFreq = map(rhythmState.tension, 0, 1, 400, 2000);
+            resonance = map(rhythmState.evolution, 0, 1, 3, 8);
+            decay = 0.25;
+            // Add distortion
+            freq *= (1 + random(-0.01, 0.01));  // Slight randomization
+            break;
+        case 'acid':
+            filterFreq = map(sin(frameCount * 0.1), -1, 1, 500, 4000);
+            resonance = 15 + sin(frameCount * 0.05) * 5;
+            decay = 0.2;
+            break;
+        case 'perc':
+            filterFreq = 3000 + random(-500, 500);
+            resonance = 2;
+            decay = 0.1;
+            // Add noise
+            freq *= (1 + random(-0.05, 0.05));
+            break;
+    }
+    
+    // Apply evolution effects with more intensity
+    freq *= (1 + sin(filterSweep) * 0.15 * rhythmState.evolution);
+    amplitude *= (1 + rhythmState.tension * 0.3);
+    
+    // Add acid-style filter sweep
+    rhythmState.acidCutoff = (rhythmState.acidCutoff + 0.1) % TWO_PI;
+    let acidSweep = map(sin(rhythmState.acidCutoff), -1, 1, 0.5, 2);
+    filterFreq *= acidSweep;
+    
+    technoSynth.freq(freq);
+    technoSynth.amp(amplitude, 0.01);
+    technoFilter.freq(filterFreq);
+    technoFilter.res(resonance);
+    technoSynth.start();
+    
+    // More aggressive delay modulation
+    technoDelay.feedback(map(rhythmState.evolution, 0, 1, 0.3, 0.7));
+    technoDelay.delayTime(map(rhythmState.tension, 0, 1, 0.16, 0.33));  // Synced to rhythm
+    
+    setTimeout(() => {
+        technoSynth.amp(0, decay);
+    }, beatInterval * decay);
+}
+
+// Add this function to evolve rhythm patterns
+function evolveRhythmPattern() {
+    // More aggressive evolution rates
+    let mainEvolution = rhythmState.complexity * 0.4;
+    let subEvolution = rhythmState.complexity * 0.5;
+    let bassEvolution = rhythmState.evolution * 0.4;
+    
+    // Evolve main beat (kick drum)
+    rhythmState.mainBeat = rhythmState.mainBeat.map((beat, i) => {
+        if (random() < mainEvolution) {
+            // More varied kick patterns
+            return random([0, 0.7, 1, 1]); // Bias towards strong kicks
+        }
+        return beat;
+    });
+    
+    // Evolve sub beat (hi-hats)
+    rhythmState.subBeat = rhythmState.subBeat.map((beat, i) => {
+        if (random() < subEvolution) {
+            // Create rolling hi-hat patterns
+            return random([0, 0.3, 0.4, 0.5]) * (i % 2 ? 0.8 : 1);
+        }
+        return beat;
+    });
+    
+    // Evolve acid line
+    rhythmState.acid = rhythmState.acid.map((beat, i) => {
+        if (random() < rhythmState.evolution * 0.3) {
+            // Create acid-style patterns
+            return random([0, 0.5, 0.7]) * (1 + sin(i * PI/4) * 0.2);
+        }
+        return beat;
+    });
+    
+    // Evolve percussion
+    rhythmState.percs = rhythmState.percs.map((beat, i) => {
+        if (random() < rhythmState.complexity * 0.4) {
+            // Industrial percussion patterns
+            return random([0, 0.3, 0.4]) * (1 + cos(i * PI/3) * 0.3);
+        }
+        return beat;
+    });
+    
+    // Evolve bassline with more acid-style movement
+    if (random() < bassEvolution) {
+        let baseNote = random(rhythmState.currentScale) * 0.5;
+        rhythmState.bassline = rhythmState.bassline.map((beat, i) => {
+            if (beat > 0) {
+                // Create sliding bass notes
+                return beat * (1 + sin(i * PI/4) * 0.3);
+            }
+            return beat;
+        });
+        rhythmState.bassNote = baseNote;
+    }
+    
+    // Increase resonance over time
+    rhythmState.resonance = min(rhythmState.resonance + 0.1, 15);
+}
+
+// Update ambient sound to be more rhythmic
+function updateAmbientSound() {
+    if (!soundEnabled) return;
+    
+    let currentTime = millis();
+    
+    // Create evolving ambient texture with rhythm influence
+    let ambientFreq = map(sin(currentTime * 0.001), -1, 1, 220, 440) * 
+                      (1 + rhythmState.evolution * 0.5);
+    let ambientAmp = map(sin(currentTime * 0.0005), -1, 1, 0.05, 0.15) * 
+                     (1 - rhythmState.tension * 0.5);
+    
+    // Modulate filter with rhythm
+    let filterFreq = map(sin(currentTime * 0.0015), -1, 1, 500, 5000) * 
+                    (1 + rhythmState.complexity * 0.5);
+    
+    technoSynth.freq(ambientFreq);
+    technoSynth.amp(ambientAmp, 0.1);
+    technoFilter.freq(filterFreq);
 }
