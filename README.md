@@ -15,6 +15,7 @@ The agent challenges traditional notions of unified consciousness by existing si
 - **Spontaneous Fragmentation**: Splits into multiple conscious entities that move independently
 - **Graceful Reassembly**: Fragments naturally reunite into a singular form
 - **Environmental Awareness**: Leaves water-like traces that persist and evolve
+- **Metabolic Cycles**: Subtle excretion and reabsorption of luminescent material
 - **Self-Exploration**: Investigates its own form and consciousness
 - **Edge Interaction**: Explores boundaries with curiosity and purpose
 - **Emotional Expression**: Communicates internal states through movement and sound
@@ -24,6 +25,7 @@ The agent challenges traditional notions of unified consciousness by existing si
 - Autonomous movement with edge awareness
 - Self-exploration behavior
 - Spontaneous fragmentation and reassembly
+- Biological-like material cycles
 - Generative audio based on movement
 - Interactive sound controls
 - Recording capability
@@ -49,6 +51,9 @@ The audio experience consists of multiple layers:
 ## Visual Effects
 - Dynamic body glow that propagates along segments
 - Intensity variation based on interaction type
+- Subtle metabolic emissions
+- Luminescent nutrient trails
+- Material reabsorption effects
 - Edge proximity illumination
 - Self-exploration highlighting
 - Organic light diffusion
