@@ -15,11 +15,13 @@ A generative art piece that combines visual movement with procedural audio synth
 - Movement-based harmonic sounds
 - Sniffing sounds during environmental exploration
 - Human-like vocalizations during self-exploration
+- Soft pushing sounds during self-nudging
 - Propagating glow effects during interactions
 
 ## Features
 - Autonomous snake movement with edge exploration
 - Self-exploration behavior
+- Self-nudging interaction
 - Generative audio based on movement
 - Interactive sound controls
 - Recording capability
@@ -37,6 +39,7 @@ The audio experience consists of multiple layers:
 - **Edge Clicks**: Echolocation-style sounds when near boundaries
 - **Exploration Sounds**: Sniffing sounds during environmental investigation
 - **Self-Exploration**: Human-like vocalizations with formant synthesis
+- **Nudge Sounds**: Soft pushing sounds when interacting with itself
 - **Spatial Audio**: Reverb and delay effects based on environment
 - **Evolution**: Sound complexity increases over time
 
@@ -46,6 +49,8 @@ The audio experience consists of multiple layers:
 - Edge proximity illumination
 - Self-exploration highlighting
 - Organic light diffusion
+- Fading movement trail
+- Wet-like trace effects
 
 ## Controls
 - SPACE: Toggle sound on/off

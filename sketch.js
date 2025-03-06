@@ -133,6 +133,14 @@ let bodyGlow = [];  // Array to store glow values for each segment
 let maxBodyGlow = 2.0;  // Maximum body glow intensity
 let bodyGlowDecay = 0.97;  // How quickly body glow fades
 
+// Update these variables at the top
+let trail = [];  // Array to store trail positions
+let trailLength = 300;  // Much longer trail for more persistence
+let trailOpacity = [];  // Array to store opacity values
+let trailDecay = 0.997;  // Much slower decay for longer-lasting trails
+let trailWidth = 100;   // Match snake's full body width
+let trailSpread = 2;    // How much the trail spreads over time
+
 function windowResized() {
 	resizeCanvas(windowWidth, windowHeight);
 	// Adjust snake properties based on new canvas size
@@ -286,6 +294,12 @@ function setup() {
 	// Initialize body glow array
 	for (let i = 0; i < points; i++) {
 		bodyGlow.push(0);
+	}
+	
+	// Initialize trail arrays
+	for (let i = 0; i < trailLength; i++) {
+		trail.push(createVector(0, 0));
+		trailOpacity.push(0);
 	}
 }
 
@@ -520,6 +534,62 @@ function draw() {
 	if (edgeProximity < edgeGlowDistance) {
 		let glowIntensity = map(edgeProximity, 0, edgeGlowDistance, maxGlow, 0);
 		headGlow = lerp(headGlow, glowIntensity, 0.1);
+	}
+	
+	// Update trail
+	trail.push(createVector(segments[0].x, segments[0].y));
+	trailOpacity.push(0.4);  // Lower initial opacity for water effect
+	
+	if (trail.length > trailLength) {
+		trail.shift();
+		trailOpacity.shift();
+	}
+	
+	// Draw trail first (underneath the snake)
+	noFill();
+	for (let i = 0; i < trail.length - 1; i++) {
+		let alpha = trailOpacity[i] * 255;
+		if (alpha > 1) {  // Lower threshold for visibility
+			// Add gentle ripple effect
+			let ripple = sin(frameCount * 0.05 + i * 0.1) * 1.5;
+			
+			// Trail gets slightly wider as it ages
+			let ageSpread = map(i, 0, trail.length, 0, trailSpread);
+			let currentWidth = trailWidth + ageSpread + ripple;
+			
+			strokeWeight(currentWidth);
+			
+			// Water-like blue tint with transparency
+			let blueShade = map(i, 0, trail.length, 200, 180);
+			stroke(180, blueShade, 255, alpha * 0.25);  // More translucent blue
+			
+			// Draw with slight curve for fluid look
+			beginShape();
+			curveVertex(trail[i].x, trail[i].y);
+			curveVertex(trail[i].x, trail[i].y);
+			curveVertex(trail[i+1].x, trail[i+1].y);
+			curveVertex(trail[i+1].x, trail[i+1].y);
+			endShape();
+		}
+		
+		// Slower fade for water persistence
+		trailOpacity[i] *= trailDecay;
+		
+		// Very subtle movement to simulate water settling
+		let ageFactor = map(i, 0, trail.length, 0.1, 0.01);
+		trail[i].x += sin(frameCount * 0.01 + i * 0.1) * ageFactor;
+		trail[i].y += cos(frameCount * 0.01 + i * 0.1) * ageFactor;
+	}
+	
+	// Update trail with current position
+	if (frameCount % 2 === 0) {  // Add points less frequently for smoother trail
+		trail.push(createVector(segments[0].x, segments[0].y));
+		trailOpacity.push(0.5);  // Higher initial opacity
+		
+		if (trail.length > trailLength) {
+			trail.shift();
+			trailOpacity.shift();
+		}
 	}
 	
 	// Draw the snake
