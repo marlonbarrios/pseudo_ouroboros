@@ -239,27 +239,19 @@ let beatInterval = 200; // 120 BPM
 let filterSweep = 0;
 
 // Add these variables at the top
-let rhythmState = {
-    mainBeat: [1, 0, 0.7, 0, 1, 0, 0.7, 0.3],  // Basic kick pattern
-    subBeat: [0.3, 0.5, 0, 0.4, 0.3, 0.5, 0, 0.4],  // Hi-hat pattern
-    bassline: [1, 0, 0.8, 0.4, 0.6, 0, 0.7, 0.4],  // Acid bass pattern
-    percs: [0, 0.4, 0, 0.3, 0, 0.4, 0.3, 0],  // Industrial percussion
-    acid: [0.7, 0, 0.5, 0, 0.7, 0, 0.5, 0],   // Acid synth sequence
-    evolution: 0,
-    complexity: 0,
-    tension: 0,
-    lastPatternChange: 0,
-    patternDuration: 4000,  // Faster pattern changes
-    currentScale: [220, 233.08, 277.18, 293.66, 329.63, 369.99, 415.30], // Industrial scale
-    bassNote: 110,
-    acidCutoff: 0,
-    resonance: 5
+let evolutionState = {
+    movement: 0,        // 0-1: Controls movement complexity
+    sound: 0,          // 0-1: Controls sound complexity
+    awakening: 0,      // 0-1: Overall evolution progress
+    startTime: 0,      // When the evolution began
+    evolutionDuration: 180000  // 3 minutes for full evolution
 };
 
 // Add these variables at the top
-let intersectionSegments = [];  // Store intersection segments
-let maxSegments = 20;          // Maximum number of stored segments
-let segmentLifespan = 1000;    // How long segments stay visible (in milliseconds)
+let volumeFluctuation = 0;
+let volumeNoiseOffset = 0;
+let volumeNoiseSpeed = 0.001;
+let volumeNoiseAmount = 0.3;  // Maximum volume fluctuation (30%)
 
 function windowResized() {
 	resizeCanvas(windowWidth, windowHeight);
@@ -456,6 +448,19 @@ function setup() {
 	technoDelay.setType('pingPong');
 	technoFilter.freq(1000);
 	technoFilter.res(5);
+	
+	// Initialize in dormant state
+	noiseSpeed = 0;
+	noiseAmount = 0;
+	evolutionState.startTime = millis();
+	speedMultiplier = 0;
+	
+	// Start with all sound parameters at minimum
+	if (soundEnabled) {
+		technoSynth.amp(0);
+		technoFilter.freq(500);
+		technoDelay.feedback(0);
+	}
 }
 
 function draw() {
@@ -1124,7 +1129,14 @@ function draw() {
 		// Update ambient sound
 		updateAmbientSound();
 		
-		drawIntersectionSegments();
+		updateEvolution();
+		
+		// Only process movement if awakening has started
+		if (evolutionState.awakening > 0) {
+			let movementScale = evolutionState.movement;
+			targetX += random(-noiseAmount, noiseAmount) * movementScale;
+			targetY += random(-noiseAmount, noiseAmount) * movementScale;
+		}
 		
 	} catch (e) {
 		console.error('Draw error:', e);
@@ -1978,96 +1990,6 @@ function drawSegments() {
 
 // Update checkSelfIntersection function
 function checkSelfIntersection() {
-    let head = segments[0];
-    for (let i = 5; i < segments.length; i++) {
-        let segment = segments[i];
-        let d = dist(head.x, head.y, segment.x, segment.y);
-        if (d < segmentLength * 0.5) {
-            // Create intersection segment
-            createIntersectionSegment(head.x, head.y, segment.x, segment.y);
-            
-            // Trigger evolution and other effects
-            evolveOrganism(head);
-            headGlow = maxGlow * 2;
-            break;
-        }
-    }
-}
-
-// Add this new function to create intersection segments
-function createIntersectionSegment(x1, y1, x2, y2) {
-    let segment = {
-        x1: x1,
-        y1: y1,
-        x2: x2,
-        y2: y2,
-        birth: millis(),
-        alpha: 255,
-        thickness: random(2, 5),
-        color: color(
-            200 + random(-20, 20) * colorEvolution,
-            220 + random(-20, 20) * colorEvolution,
-            255 + random(-20, 20) * colorEvolution
-        ),
-        // Add some variation to segment
-        offset: random(TWO_PI),
-        amplitude: random(5, 15),
-        frequency: random(0.01, 0.03)
-    };
-    
-    intersectionSegments.push(segment);
-    
-    // Limit number of segments
-    if (intersectionSegments.length > maxSegments) {
-        intersectionSegments.shift();
-    }
-}
-
-// Add this function to draw the segments
-function drawIntersectionSegments() {
-    let currentTime = millis();
-    
-    for (let i = intersectionSegments.length - 1; i >= 0; i--) {
-        let seg = intersectionSegments[i];
-        let age = currentTime - seg.birth;
-        
-        if (age > segmentLifespan) {
-            intersectionSegments.splice(i, 1);
-            continue;
-        }
-        
-        // Calculate fade based on age
-        let fadeProgress = age / segmentLifespan;
-        seg.alpha = map(fadeProgress, 0, 1, 255, 0);
-        
-        // Draw glowing segment
-        for (let j = 3; j > 0; j--) {
-            let glowAlpha = seg.alpha * (j/3) * 0.5;
-            let glowThickness = seg.thickness * (j * 2);
-            
-            // Add wavey effect
-            let wave = sin(frameCount * seg.frequency + seg.offset) * seg.amplitude;
-            let dx = wave * sin(atan2(seg.y2 - seg.y1, seg.x2 - seg.x1) + PI/2);
-            let dy = wave * cos(atan2(seg.y2 - seg.y1, seg.x2 - seg.x1) + PI/2);
-            
-            strokeWeight(glowThickness);
-            seg.color.setAlpha(glowAlpha);
-            stroke(seg.color);
-            noFill();
-            
-            // Draw curved line
-            beginShape();
-            vertex(seg.x1 + dx, seg.y1 + dy);
-            let midX = (seg.x1 + seg.x2)/2 + dx*1.5;
-            let midY = (seg.y1 + seg.y2)/2 + dy*1.5;
-            quadraticVertex(midX, midY, seg.x2 + dx, seg.y2 + dy);
-            endShape();
-        }
-    }
-}
-
-// Update checkSelfIntersection function
-function checkSelfIntersection() {
 	let head = segments[0];
 	for (let i = 5; i < segments.length; i++) {
 		let segment = segments[i];
@@ -2422,196 +2344,138 @@ function updateSpawnEffects() {
 
 // Update the sound generation for eating
 function playEatingSound(food) {
-    if (!soundEnabled || millis() - lastEatSound < minEatSoundInterval) return;
+    if (!soundEnabled || evolutionState.sound < 0.1) return;
     
     let currentTime = millis();
-    lastEatSound = currentTime;
+    if (currentTime - lastEatSound < minEatSoundInterval) return;
     
-    // Evolve rhythm over time
-    rhythmState.evolution = min(rhythmState.evolution + 0.05, 1);
-    rhythmState.complexity = min(rhythmState.complexity + 0.02, 1);
+    // Scale sound intensity with evolution and add fluctuation
+    let soundIntensity = evolutionState.sound;
+    volumeNoiseOffset += volumeNoiseSpeed;
+    volumeFluctuation = noise(volumeNoiseOffset) * volumeNoiseAmount;
+    let baseAmp = map(soundIntensity, 0, 1, 0.05, 0.2) * 
+                 (1 + volumeFluctuation);
     
-    // Change patterns periodically
-    if (currentTime - rhythmState.lastPatternChange > rhythmState.patternDuration) {
-        evolveRhythmPattern();
-        rhythmState.lastPatternChange = currentTime;
-    }
-    
-    // Generate layered techno beat
+    // Generate techno beat with dynamic amplitude
     if (currentTime - lastBeatTime > beatInterval) {
-        beatIndex = (beatIndex + 1) % rhythmState.mainBeat.length;
+        beatIndex = (beatIndex + 1) % beatPattern.length;
         lastBeatTime = currentTime;
         
-        // Main beat
-        if (rhythmState.mainBeat[beatIndex] > 0) {
-            playTechnoHit(
-                map(organismSize, 1, maxOrganismSize, 220, 440),
-                rhythmState.mainBeat[beatIndex] * 0.2,
-                'high'
-            );
+        if (beatPattern[beatIndex] > 0) {
+            let beatIntensity = beatPattern[beatIndex] * 
+                               (1 + sin(currentTime * 0.003) * 0.3);
+            
+            // Techno synth hit with fluctuating volume
+            let baseFreq = map(organismSize, 1, maxOrganismSize, 220, 440);
+            technoSynth.freq(baseFreq * (1 + sin(filterSweep) * 0.1));
+            technoSynth.amp(baseAmp * beatIntensity, 0.01);
+            technoSynth.start();
+            
+            // More dynamic filter sweep
+            filterSweep += 0.2 * (1 + volumeFluctuation);
+            let filterFreq = map(sin(filterSweep), -1, 1, 500, 5000) * 
+                           (1 + volumeFluctuation * 0.5);
+            technoFilter.freq(filterFreq);
+            
+            // Schedule note off with variable decay
+            setTimeout(() => {
+                technoSynth.amp(0, 0.1 * (1 + volumeFluctuation));
+            }, beatInterval * 0.8);
         }
-        
-        // Sub beat
-        if (rhythmState.subBeat[beatIndex] > 0 && rhythmState.complexity > 0.3) {
-            playTechnoHit(
-                map(organismSize, 1, maxOrganismSize, 330, 660),
-                rhythmState.subBeat[beatIndex] * 0.15,
-                'mid'
+    }
+    
+    // Layer frequencies with dynamic amplitudes
+    for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+            let harmonicFreq = evolvedFreq * (1 + i * 0.5);
+            technoSynth.freq(harmonicFreq);
+            
+            // Add more variation to layered sounds
+            let layerFluctuation = noise(volumeNoiseOffset + i) * volumeNoiseAmount;
+            let layerAmp = baseAmp * 0.15 / (i + 1) * 
+                          (1 + layerFluctuation) * 
+                          (1 + sin(currentTime * 0.002 + i) * 0.2);
+            
+            technoSynth.amp(layerAmp, 0.05);
+            
+            // Modulate filter with organic variations
+            technoFilter.freq(
+                map(sin(currentTime * 0.002 + i), -1, 1, 
+                    500 * (1 + layerFluctuation), 
+                    5000 * (1 + layerFluctuation)
+                )
             );
-        }
-        
-        // Bassline
-        if (rhythmState.bassline[beatIndex] > 0 && rhythmState.evolution > 0.2) {
-            playTechnoHit(
-                rhythmState.bassNote,
-                rhythmState.bassline[beatIndex] * 0.25,
-                'bass'
-            );
-        }
-        
-        // Add tension modulation
-        rhythmState.tension = sin(currentTime * 0.001) * 0.5 + 0.5;
+        }, i * beatInterval / 3);
     }
 }
 
-// Add this function to handle individual techno hits
-function playTechnoHit(baseFreq, amplitude, type) {
-    let freq = baseFreq;
-    let filterFreq, resonance, decay;
-    
-    switch(type) {
-        case 'high':
-            filterFreq = map(rhythmState.tension, 0, 1, 3000, 8000);
-            resonance = map(rhythmState.evolution, 0, 1, 8, 20);
-            decay = 0.08;  // Shorter decay for tighter sound
-            break;
-        case 'mid':
-            filterFreq = map(rhythmState.tension, 0, 1, 1000, 4000);
-            resonance = map(rhythmState.evolution, 0, 1, 5, 12);
-            decay = 0.15;
-            break;
-        case 'bass':
-            filterFreq = map(rhythmState.tension, 0, 1, 400, 2000);
-            resonance = map(rhythmState.evolution, 0, 1, 3, 8);
-            decay = 0.25;
-            // Add distortion
-            freq *= (1 + random(-0.01, 0.01));  // Slight randomization
-            break;
-        case 'acid':
-            filterFreq = map(sin(frameCount * 0.1), -1, 1, 500, 4000);
-            resonance = 15 + sin(frameCount * 0.05) * 5;
-            decay = 0.2;
-            break;
-        case 'perc':
-            filterFreq = 3000 + random(-500, 500);
-            resonance = 2;
-            decay = 0.1;
-            // Add noise
-            freq *= (1 + random(-0.05, 0.05));
-            break;
-    }
-    
-    // Apply evolution effects with more intensity
-    freq *= (1 + sin(filterSweep) * 0.15 * rhythmState.evolution);
-    amplitude *= (1 + rhythmState.tension * 0.3);
-    
-    // Add acid-style filter sweep
-    rhythmState.acidCutoff = (rhythmState.acidCutoff + 0.1) % TWO_PI;
-    let acidSweep = map(sin(rhythmState.acidCutoff), -1, 1, 0.5, 2);
-    filterFreq *= acidSweep;
-    
-    technoSynth.freq(freq);
-    technoSynth.amp(amplitude, 0.01);
-    technoFilter.freq(filterFreq);
-    technoFilter.res(resonance);
-    technoSynth.start();
-    
-    // More aggressive delay modulation
-    technoDelay.feedback(map(rhythmState.evolution, 0, 1, 0.3, 0.7));
-    technoDelay.delayTime(map(rhythmState.tension, 0, 1, 0.16, 0.33));  // Synced to rhythm
-    
-    setTimeout(() => {
-        technoSynth.amp(0, decay);
-    }, beatInterval * decay);
-}
-
-// Add this function to evolve rhythm patterns
-function evolveRhythmPattern() {
-    // More aggressive evolution rates
-    let mainEvolution = rhythmState.complexity * 0.4;
-    let subEvolution = rhythmState.complexity * 0.5;
-    let bassEvolution = rhythmState.evolution * 0.4;
-    
-    // Evolve main beat (kick drum)
-    rhythmState.mainBeat = rhythmState.mainBeat.map((beat, i) => {
-        if (random() < mainEvolution) {
-            // More varied kick patterns
-            return random([0, 0.7, 1, 1]); // Bias towards strong kicks
-        }
-        return beat;
-    });
-    
-    // Evolve sub beat (hi-hats)
-    rhythmState.subBeat = rhythmState.subBeat.map((beat, i) => {
-        if (random() < subEvolution) {
-            // Create rolling hi-hat patterns
-            return random([0, 0.3, 0.4, 0.5]) * (i % 2 ? 0.8 : 1);
-        }
-        return beat;
-    });
-    
-    // Evolve acid line
-    rhythmState.acid = rhythmState.acid.map((beat, i) => {
-        if (random() < rhythmState.evolution * 0.3) {
-            // Create acid-style patterns
-            return random([0, 0.5, 0.7]) * (1 + sin(i * PI/4) * 0.2);
-        }
-        return beat;
-    });
-    
-    // Evolve percussion
-    rhythmState.percs = rhythmState.percs.map((beat, i) => {
-        if (random() < rhythmState.complexity * 0.4) {
-            // Industrial percussion patterns
-            return random([0, 0.3, 0.4]) * (1 + cos(i * PI/3) * 0.3);
-        }
-        return beat;
-    });
-    
-    // Evolve bassline with more acid-style movement
-    if (random() < bassEvolution) {
-        let baseNote = random(rhythmState.currentScale) * 0.5;
-        rhythmState.bassline = rhythmState.bassline.map((beat, i) => {
-            if (beat > 0) {
-                // Create sliding bass notes
-                return beat * (1 + sin(i * PI/4) * 0.3);
-            }
-            return beat;
-        });
-        rhythmState.bassNote = baseNote;
-    }
-    
-    // Increase resonance over time
-    rhythmState.resonance = min(rhythmState.resonance + 0.1, 15);
-}
-
-// Update ambient sound to be more rhythmic
-function updateAmbientSound() {
+// Update spawn sound to be more techno
+function playSpawnSound() {
     if (!soundEnabled) return;
+    
+    // Create rhythmic pattern
+    for (let i = 0; i < 4; i++) {
+        setTimeout(() => {
+            let freq = map(i, 0, 3, 880, 220);
+            technoSynth.freq(freq);
+            technoSynth.amp(0.2 * (1 - i/4), 0.05);
+            
+            // Filter modulation
+            technoFilter.freq(map(i, 0, 3, 5000, 500));
+            technoFilter.res(map(i, 0, 3, 10, 2));
+            
+            // Delay feedback
+            technoDelay.feedback(map(i, 0, 3, 0.7, 0.2));
+        }, i * beatInterval);
+    }
+}
+
+// Update the ambient sound
+function updateAmbientSound() {
+    if (!soundEnabled || evolutionState.sound < 0.05) return;
     
     let currentTime = millis();
     
-    // Create evolving ambient texture with rhythm influence
-    let ambientFreq = map(sin(currentTime * 0.001), -1, 1, 220, 440) * 
-                      (1 + rhythmState.evolution * 0.5);
-    let ambientAmp = map(sin(currentTime * 0.0005), -1, 1, 0.05, 0.15) * 
-                     (1 - rhythmState.tension * 0.5);
+    // Scale ambient sound with evolution
+    let ambientIntensity = evolutionState.sound;
+    let baseAmp = map(ambientIntensity, 0, 1, 0.02, 0.15);
     
-    // Modulate filter with rhythm
-    let filterFreq = map(sin(currentTime * 0.0015), -1, 1, 500, 5000) * 
-                    (1 + rhythmState.complexity * 0.5);
+    // Add organic volume fluctuations
+    volumeNoiseOffset += volumeNoiseSpeed;
+    volumeFluctuation = noise(volumeNoiseOffset) * volumeNoiseAmount;
+    let fluctuatingAmp = baseAmp * (1 + volumeFluctuation);
     
+    // Add subtle rhythmic pulsing
+    let pulsing = sin(currentTime * 0.002) * 0.2 + 0.8;
+    
+    let ambientFreq = map(sin(currentTime * 0.001), -1, 1, 220, 440);
     technoSynth.freq(ambientFreq);
-    technoSynth.amp(ambientAmp, 0.1);
-    technoFilter.freq(filterFreq);
+    technoSynth.amp(fluctuatingAmp * pulsing, 0.1);
+    
+    // Modulate filter with more variation
+    let filterMod = map(sin(currentTime * 0.0015), -1, 1, 500, 5000) * 
+                   (1 + volumeFluctuation * 0.5);
+    technoFilter.freq(filterMod);
+}
+
+// Add this function to handle evolution
+function updateEvolution() {
+	let currentTime = millis();
+	let progress = (currentTime - evolutionState.startTime) / evolutionState.evolutionDuration;
+	evolutionState.awakening = constrain(progress, 0, 1);
+	
+	// Update movement parameters
+	evolutionState.movement = smoothstep(0, 0.3, evolutionState.awakening);
+	noiseSpeed = baseNoiseSpeed * evolutionState.movement;
+	noiseAmount = baseNoiseAmount * evolutionState.movement;
+	speedMultiplier = map(evolutionState.movement, 0, 1, 0.1, 1);
+	
+	// Update sound parameters
+	evolutionState.sound = smoothstep(0.1, 0.4, evolutionState.awakening);
+}
+
+// Helper function for smooth transitions
+function smoothstep(edge0, edge1, x) {
+	x = constrain((x - edge0) / (edge1 - edge0), 0, 1);
+	return x * x * (3 - 2 * x);
 }
