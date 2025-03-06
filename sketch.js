@@ -111,7 +111,9 @@ let evolutionInterval = 30000; // Time between evolutions (30 seconds)
 let headGlow = 0;  // Current glow intensity
 let maxGlow = 1.5;  // Maximum glow multiplier
 let glowDecay = 0.95;  // How quickly glow fades
-let edgeGlowDistance = 150;  // Distance from edge to start glowing
+let edgeGlowDistance = 200;  // Increased edge detection range
+let edgeIntensity = 0;      // New variable for edge effect intensity
+let edgeParticles = [];     // Array for edge investigation particles
 
 // Add these variables at the top
 let clickOsc;
@@ -151,15 +153,15 @@ let fragmentDuration = 200;  // How long to stay fragmented
 // Add these variables at the top
 let nutrients = [];  // Array to store nutrient particles
 let metabolicTimer = 0;
-let metabolicRate = 0.01;  // Increased rate
-let maxNutrients = 300;    // More particles
-let reabsorptionRadius = 100; // Larger radius
+let metabolicRate = 0.015;  // Increased excretion rate
+let maxNutrients = 400;    // More particles allowed
+let reabsorptionRadius = 150; // Larger absorption radius
 
 // Add these variables at the top
 let foldingNutrients = false;
 let foldTarget = null;
 let foldProgress = 0;
-let foldDuration = 100;
+let foldDuration = 150;    // Slower folding for visibility
 let nutrientCluster = [];
 let digestingTimer = 0;
 
@@ -176,6 +178,10 @@ let lastCleanupTime = 0;
 let cleanupInterval = 1000; // Cleanup every second
 let isProcessingCluster = false;
 let maxProcessingTime = 16; // Max ms for processing
+
+// Add these variables at the top
+let nutrientGlowIntensity = 2.0; // Brighter glow
+let absorptionParticles = [];
 
 function windowResized() {
 	resizeCanvas(windowWidth, windowHeight);
@@ -422,74 +428,75 @@ function draw() {
 				}
 				
 				if (edgeExploring) {
-					// Enhanced sniffing behavior
-					sniffingIntensity = lerp(sniffingIntensity, 1, 0.1);
-					sniffingFrequency = map(speedMultiplier, 0.5, 1.2, 0.15, 0.3);
-					sniffingPhase += sniffingFrequency;
+					// Enhanced sniffing behavior near edges
+					sniffingIntensity = lerp(sniffingIntensity, 1.5, 0.1);  // More intense sniffing
+					sniffingFrequency = map(speedMultiplier, 0.5, 1.2, 0.2, 0.4);  // Faster sniffing
 					
-					// Create more organic sniffing pattern
-					let baseSniff = sin(sniffingPhase) * cos(sniffingPhase * 0.7);
-					let secondarySniff = sin(sniffingPhase * 1.3) * 0.5;
-					let sniffX = (baseSniff + secondarySniff) * 40 * sniffingIntensity;
-					let sniffY = (cos(sniffingPhase * 0.8) * sin(sniffingPhase * 1.2)) * 30 * sniffingIntensity;
+					// More dramatic edge movement
+					let edgeOffset = sin(frameCount * 0.1) * 30;  // Larger oscillation
+					let investigationDepth = sin(frameCount * 0.05) * 40;  // Deeper investigation
 					
-					// Add random "interest points" that attract the sniffing
-					if (!lastSniffPoint || random(1) < 0.02) {
-						lastSniffPoint = createVector(
-							random(-50, 50),
-							random(-50, 50)
-						);
+					// Create investigation particles
+					if (frameCount % 5 === 0) {  // More frequent particles
+						edgeParticles.push({
+							x: segments[0].x + random(-20, 20),
+							y: segments[0].y + random(-20, 20),
+							age: 0,
+							size: random(4, 8),
+							color: color(255, 200, 200, 200)
+						});
 					}
 					
-					// Blend regular sniffing with interest point investigation
-					sniffX = lerp(sniffX, lastSniffPoint.x, 0.2);
-					sniffY = lerp(sniffY, lastSniffPoint.y, 0.2);
-					
-					// Apply enhanced sniffing to edge movement
+					// Update edge behavior based on position
 					if (edgePoint.x < 100) {  // Left edge
-						edgePoint.y += edgeDirection * 2;
-						targetX = 50 + sniffX;
-						targetY = edgePoint.y + sniffY;
+						edgePoint.y += edgeDirection * 3;  // Faster movement
+						targetX = 50 + edgeOffset;
+						targetY = edgePoint.y + investigationDepth;
+						edgeIntensity = map(segments[0].x, 100, 0, 0, 1);
 					} else if (edgePoint.x > width - 100) {  // Right edge
-						edgePoint.y += edgeDirection * 2;
-						targetX = width - 50 + sniffX;
-						targetY = edgePoint.y + sniffY;
+						edgePoint.y += edgeDirection * 3;
+						targetX = width - 50 + edgeOffset;
+						targetY = edgePoint.y + investigationDepth;
+						edgeIntensity = map(segments[0].x, width-100, width, 0, 1);
 					} else if (edgePoint.y < 100) {  // Top edge
-						edgePoint.x += edgeDirection * 2;
-						targetX = edgePoint.x + sniffX;
-						targetY = 50 + sniffY;
+						edgePoint.x += edgeDirection * 3;
+						targetX = edgePoint.x + investigationDepth;
+						targetY = 50 + edgeOffset;
+						edgeIntensity = map(segments[0].y, 100, 0, 0, 1);
 					} else {  // Bottom edge
-						edgePoint.x += edgeDirection * 2;
-						targetX = edgePoint.x + sniffX;
-						targetY = height - 50 + sniffY;
+						edgePoint.x += edgeDirection * 3;
+						targetX = edgePoint.x + investigationDepth;
+						targetY = height - 50 + edgeOffset;
+						edgeIntensity = map(segments[0].y, height-100, height, 0, 1);
 					}
 					
-					// Make sniffing sounds
-					if (frameCount > sniffingSoundTimer && soundEnabled) {
-						let sniffSpeed = abs(sniffX) + abs(sniffY);
-						if (sniffSpeed > 5) {
-							makeSniffingSound(sniffSpeed);
-							sniffingSoundTimer = frameCount + 10;  // Adjust timing between sniffs
+					// Update and draw edge particles
+					for (let i = edgeParticles.length - 1; i >= 0; i--) {
+						let p = edgeParticles[i];
+						p.age += 0.05;
+						
+						// Particle movement
+						let angle = noise(p.x * 0.01, p.y * 0.01, frameCount * 0.02) * TWO_PI;
+						p.x += cos(angle) * 2;
+						p.y += sin(angle) * 2;
+						
+						// Draw particle with glow
+						noStroke();
+						for (let j = 3; j > 0; j--) {
+							let alpha = map(j, 3, 0, 50, 150) * (1 - p.age);
+							p.color.setAlpha(alpha);
+							fill(p.color);
+							circle(p.x, p.y, p.size * j);
+						}
+						
+						// Remove old particles
+						if (p.age > 1) {
+							edgeParticles.splice(i, 1);
 						}
 					}
 					
-					// Keep within bounds
-					edgePoint.x = constrain(edgePoint.x, 50, width - 50);
-					edgePoint.y = constrain(edgePoint.y, 50, height - 50);
-					
-					// Occasionally change direction
-					if (random(1) < 0.005) {
-						edgeDirection *= -1;
-					}
-					
-					// Adjust speed for edge exploration
-					speedMultiplier = map(sin(frameCount * 0.05), -1, 1, 0.5, 1.2);
-					
-					edgeTimer--;
-					if (edgeTimer <= 0) {
-						edgeExploring = false;
-						changeDirectionTime = frameCount;  // Trigger new direction
-					}
+					// Add extra glow when near edges
+					headGlow = max(headGlow, edgeIntensity * 2);
 				}
 			}
 			
@@ -882,12 +889,13 @@ function draw() {
 				x: segment.x + random(-10, 10),
 				y: segment.y + random(-10, 10),
 				age: 0,
-				size: random(6, 12),  // Larger size
-				opacity: random(0.7, 1.0),  // Higher opacity
-				color: color(200 + random(-20, 20), 
-						220 + random(-20, 20), 
+				size: random(8, 15),  // Larger size
+				opacity: random(0.8, 1.0),  // Higher opacity
+				color: color(220 + random(-20, 20), 
+						240 + random(-20, 20), 
 						255, 
-						255)  // Brighter color
+						255),  // Brighter color
+				glowSize: random(2, 3)  // Variable glow size
 			});
 		}
 		
@@ -916,6 +924,25 @@ function draw() {
 			}
 		} else {
 			nutrients = [];
+		}
+		
+		// Add this to draw function to update absorption particles
+		if (absorptionParticles.length > 0) {
+			for (let i = absorptionParticles.length - 1; i >= 0; i--) {
+				let p = absorptionParticles[i];
+				p.x += p.vx;
+				p.y += p.vy;
+				p.life *= 0.9;
+				
+				// Draw particle
+				noStroke();
+				fill(220, 240, 255, p.life * 255);
+				circle(p.x, p.y, p.life * 8);
+				
+				if (p.life < 0.01) {
+					absorptionParticles.splice(i, 1);
+				}
+			}
 		}
 		
 	} catch (e) {
@@ -1577,9 +1604,36 @@ function updateFolding() {
 
 function completeFolding() {
 	let totalEnergy = 0;
+	
+	// Create absorption flash effect
+	let flashSize = 100;
+	let flashColor = color(220, 240, 255, 150);
+	noStroke();
+	for (let i = 4; i > 0; i--) {
+		flashColor.setAlpha(150 / i);
+		fill(flashColor);
+		circle(foldTarget.center.x, foldTarget.center.y, flashSize * i);
+	}
+	
 	for (let item of nutrientCluster) {
 		if (item && item.nutrient) {
 			totalEnergy += item.nutrient.opacity;
+			
+			// Create particle burst effect
+			for (let i = 0; i < 5; i++) {
+				let angle = random(TWO_PI);
+				let speed = random(2, 5);
+				let particle = {
+					x: item.nutrient.x,
+					y: item.nutrient.y,
+					vx: cos(angle) * speed,
+					vy: sin(angle) * speed,
+					life: 1
+				};
+				absorptionParticles.push(particle);
+			}
+			
+			// Remove the nutrient
 			let index = nutrients.indexOf(item.nutrient);
 			if (index > -1) {
 				nutrients.splice(index, 1);
@@ -1587,9 +1641,11 @@ function completeFolding() {
 		}
 	}
 	
-	digestingTimer = 100;
-	headGlow = min(headGlow + totalEnergy, maxGlow * 2);
+	// Stronger energy boost
+	digestingTimer = 150;
+	headGlow = min(headGlow + totalEnergy * 1.5, maxGlow * 3);
 	
+	// Reset states
 	foldingNutrients = false;
 	nutrientCluster = [];
 	foldTarget = null;
@@ -1598,22 +1654,33 @@ function completeFolding() {
 function updateFoldingAnimation() {
 	for (let item of nutrientCluster) {
 		let easeAmount = easeInOutCubic(foldProgress);
-		item.nutrient.x = lerp(item.startPos.x, item.endPos.x, easeAmount);
-		item.nutrient.y = lerp(item.startPos.y, item.endPos.y, easeAmount);
 		
-		// Add folding effects
+		// More dramatic spiral movement
+		let spiralRadius = (1 - foldProgress) * 50; // Larger spiral
+		let spiralSpeed = foldProgress * TWO_PI * 3; // Faster rotation
 		let spiral = createVector(
-			cos(foldProgress * TWO_PI * 2) * (1 - foldProgress) * 20,
-			sin(foldProgress * TWO_PI * 2) * (1 - foldProgress) * 20
+			cos(spiralSpeed) * spiralRadius,
+			sin(spiralSpeed) * spiralRadius
 		);
-		item.nutrient.x += spiral.x;
-		item.nutrient.y += spiral.y;
 		
-		// Increase glow during folding
-		item.nutrient.opacity = lerp(item.nutrient.opacity, 1, 0.1);
+		// Update position with more dramatic movement
+		item.nutrient.x = lerp(item.startPos.x, item.endPos.x, easeAmount) + spiral.x;
+		item.nutrient.y = lerp(item.startPos.y, item.endPos.y, easeAmount) + spiral.y;
+		
+		// Enhanced visual effects during folding
+		item.nutrient.opacity = lerp(0.8, 1.5, easeAmount); // Brighter during fold
 		item.nutrient.size = lerp(item.nutrient.size, 
-								item.nutrient.size * 1.5, 
-								easeAmount);
+								item.nutrient.size * 2.5, 
+								easeAmount); // Larger growth
+		
+		// Add pulsing effect
+		let pulse = sin(foldProgress * PI * 4) * 0.3;
+		item.nutrient.size *= (1 + pulse);
+		
+		// Draw connection lines between folding nutrients
+		stroke(220, 240, 255, 100 * (1 - foldProgress));
+		strokeWeight(2);
+		line(item.nutrient.x, item.nutrient.y, item.endPos.x, item.endPos.y);
 	}
 }
 
