@@ -120,6 +120,19 @@ let lastClickTime = 0;
 let minClickInterval = 100;  // Minimum time between clicks
 let clickIntensity = 0;
 
+// Add these variables at the top
+let selfExploring = false;
+let selfExploreTimer = 0;
+let selfExploreTarget = 0;
+let squeakOsc;
+let squeakEnv;
+let lastSqueakTime = 0;
+
+// Update these variables at the top
+let bodyGlow = [];  // Array to store glow values for each segment
+let maxBodyGlow = 2.0;  // Maximum body glow intensity
+let bodyGlowDecay = 0.97;  // How quickly body glow fades
+
 function windowResized() {
 	resizeCanvas(windowWidth, windowHeight);
 	// Adjust snake properties based on new canvas size
@@ -258,6 +271,22 @@ function setup() {
 	clickOsc.start();
 	clickOsc.disconnect();
 	clickOsc.connect(filter);
+	
+	// Initialize squeak oscillator and envelope
+	squeakOsc = new p5.Oscillator('sine');
+	squeakEnv = new p5.Envelope();
+	squeakEnv.setADSR(0.05, 0.1, 0.2, 0.1);
+	squeakEnv.setRange(0.3, 0);
+	
+	squeakOsc.amp(0);
+	squeakOsc.start();
+	squeakOsc.disconnect();
+	squeakOsc.connect(filter);
+	
+	// Initialize body glow array
+	for (let i = 0; i < points; i++) {
+		bodyGlow.push(0);
+	}
 }
 
 function draw() {
@@ -590,6 +619,60 @@ function draw() {
 	if (edgeExploring && soundEnabled) {
 		makeClickSound();
 	}
+	
+	if (!isResting && !edgeExploring && random(1) < 0.01) {
+		selfExploring = true;
+		selfExploreTimer = random(100, 200);
+		// Choose random segment to explore (not too close to head)
+		selfExploreTarget = floor(random(5, segments.length - 1));
+	}
+	
+	if (selfExploring) {
+		let target = segments[selfExploreTarget];
+		targetX = target.x + sin(frameCount * 0.1) * 20;
+		targetY = target.y + cos(frameCount * 0.1) * 20;
+		
+		// Calculate distance to target segment
+		let distToTarget = dist(segments[0].x, segments[0].y, target.x, target.y);
+		
+		// Make squeak sound based on proximity
+		if (distToTarget < 50) {
+			let intensity = map(distToTarget, 50, 10, 0, 1, true);
+			makeSqueakSound(intensity);
+		}
+		
+		selfExploreTimer--;
+		if (selfExploreTimer <= 0) {
+			selfExploring = false;
+		}
+	}
+	
+	// Draw body glow
+	noFill();
+	strokeCap(ROUND);
+	
+	// Draw glow for each segment
+	for (let i = 0; i < segments.length - 1; i++) {
+		if (bodyGlow[i] > 0.1) {
+			let glowLayers = 3;
+			for (let j = glowLayers; j > 0; j--) {
+				let glowSize = 28 + j * 20 * bodyGlow[i];
+				let alpha = map(j, 0, glowLayers, 20, 60) * bodyGlow[i];
+				
+				// Adjust color based on interaction type
+				let r = 255;
+				let g = selfExploring ? map(bodyGlow[i], 0, maxBodyGlow, 100, 180) : 100;
+				let b = selfExploring ? map(bodyGlow[i], 0, maxBodyGlow, 100, 150) : 100;
+				
+				strokeWeight(glowSize);
+				stroke(r, g, b, alpha);
+				line(segments[i].x, segments[i].y, segments[i+1].x, segments[i+1].y);
+			}
+		}
+		
+		// Decay glow
+		bodyGlow[i] *= bodyGlowDecay;
+	}
 }
 
 function calculateMovementMetrics() {
@@ -786,6 +869,9 @@ function startSound() {
 	
 	clickOsc.start();
 	clickOsc.amp(0);
+	
+	squeakOsc.start();
+	squeakOsc.amp(0);
 }
 
 function stopSound() {
@@ -801,6 +887,8 @@ function stopSound() {
 	droneOsc2.amp(0, 0.5);
 	
 	clickOsc.amp(0);
+	
+	squeakOsc.amp(0);
 }
 
 // Add this function to set up recording
@@ -982,4 +1070,56 @@ function makeClickSound() {
 	clickEnv.play(clickOsc);
 	
 	lastClickTime = currentTime;
+}
+
+// Update the makeSqueakSound function for more human-like sounds
+function makeSqueakSound(intensity) {
+	if (!soundEnabled || !audioStarted) return;
+	
+	let currentTime = millis();
+	if (currentTime - lastSqueakTime < 150) return;  // Longer interval between sounds
+	
+	// Create more human-like vowel formants
+	let baseFreq = map(intensity, 0, 1, 200, 400);  // Lower frequency range
+	let formant1 = baseFreq * 2.5;  // First formant
+	let formant2 = baseFreq * 3.5;  // Second formant
+	
+	// Add vibrato for more organic sound
+	let vibrato = sin(frameCount * 0.2) * 10;
+	squeakOsc.freq(baseFreq + vibrato);
+	
+	// Modulate envelope for more speech-like qualities
+	squeakEnv.setRange(map(intensity, 0, 1, 0.1, 0.4), 0);
+	squeakEnv.setADSR(
+		0.1,                                // Attack
+		0.2,                                // Decay
+		map(intensity, 0, 1, 0.3, 0.6),     // Sustain
+		0.3                                 // Release
+	);
+	
+	// Add filter modulation for formants
+	filter.freq(formant1);
+	filter.res(8);
+	
+	// Add reverb for space
+	reverb.drywet(0.3);
+	
+	squeakEnv.play(squeakOsc);
+	lastSqueakTime = currentTime;
+	
+	// Propagate glow along the body
+	let glowIntensity = map(intensity, 0, 1, 0.5, maxBodyGlow);
+	bodyGlow[selfExploreTarget] = glowIntensity;
+	
+	// Spread glow to nearby segments
+	let spread = 3;  // How many segments each way to spread
+	for (let i = 1; i <= spread; i++) {
+		let fadeAmount = map(i, 1, spread, 0.8, 0.2);
+		if (selfExploreTarget - i >= 0) {
+			bodyGlow[selfExploreTarget - i] = max(bodyGlow[selfExploreTarget - i], glowIntensity * fadeAmount);
+		}
+		if (selfExploreTarget + i < bodyGlow.length) {
+			bodyGlow[selfExploreTarget + i] = max(bodyGlow[selfExploreTarget + i], glowIntensity * fadeAmount);
+		}
+	}
 }

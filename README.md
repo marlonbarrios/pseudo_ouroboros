@@ -2,7 +2,7 @@
 
 ![Snake Soundscape](squiggle.png)
 
-An interactive audiovisual experience where a snake-like form explores its environment with organic movement and generative sound.
+An interactive audiovisual experience where a luminous snake-like form explores its environment and itself through organic movement and generative sound. The creature exhibits emergent behaviors, creating dynamic soundscapes and visual responses as it investigates its surroundings and its own form.
 
 ## Live Demo
 [Experience Squiggle in Gradient Descent](https://marlonbarrios.github.io/sentient_squigle/)
@@ -14,9 +14,12 @@ A generative art piece that combines visual movement with procedural audio synth
 - Echolocation-like clicks when exploring edges
 - Movement-based harmonic sounds
 - Sniffing sounds during environmental exploration
+- Human-like vocalizations during self-exploration
+- Propagating glow effects during interactions
 
 ## Features
 - Autonomous snake movement with edge exploration
+- Self-exploration behavior
 - Generative audio based on movement
 - Interactive sound controls
 - Recording capability
@@ -24,6 +27,8 @@ A generative art piece that combines visual movement with procedural audio synth
 - Dynamic edge interaction
 - Ambient sound generation
 - Mouse-based interaction
+- Body-wide luminescence
+- Organic sound synthesis
 
 ## Sound Design
 The audio experience consists of multiple layers:
@@ -31,7 +36,16 @@ The audio experience consists of multiple layers:
 - **Movement Harmonics**: Dynamic tones based on speed and curvature
 - **Edge Clicks**: Echolocation-style sounds when near boundaries
 - **Exploration Sounds**: Sniffing sounds during environmental investigation
+- **Self-Exploration**: Human-like vocalizations with formant synthesis
+- **Spatial Audio**: Reverb and delay effects based on environment
 - **Evolution**: Sound complexity increases over time
+
+## Visual Effects
+- Dynamic body glow that propagates along segments
+- Intensity variation based on interaction type
+- Edge proximity illumination
+- Self-exploration highlighting
+- Organic light diffusion
 
 ## Controls
 - SPACE: Toggle sound on/off
