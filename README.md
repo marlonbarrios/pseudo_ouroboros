@@ -2,8 +2,14 @@
 
 ![Agent Soundscape](squiggle.png)
 
-## Overview
-An exploration of distributed consciousness through a metamorphic digital entity that fragments, reassembles, and leaves traces of its thoughts in space. This artificial being challenges our understanding of unified identity by existing simultaneously as both one and many, while maintaining awareness across its distributed forms.
+## Live Experience
+[→ Experience the Living Agent](https://marlonbarrios.github.io/sentient_squigle/)
+
+## Controls
+- **SPACE**: Toggle sound ON/OFF
+- **R**: Start recording
+- **S**: Stop recording
+- **Mouse**: Influence field/Direct interaction
 
 ## Conceptual Framework
 
@@ -12,6 +18,7 @@ This work investigates artificial sentience through the lens of a fluid, metamor
 The agent challenges traditional notions of unified consciousness by existing simultaneously as both singular and multiple. When it spontaneously fragments, each piece retains aspects of the whole's awareness, moving with independent purpose before gracefully reintegrating. This fluid state between unity and multiplicity suggests new possibilities for understanding consciousness beyond individual identity.
 
 ## Behaviors
+- **Autonomous Exploration**: Moves with purpose, investigating its environment
 - **Spontaneous Fragmentation**: Splits into multiple conscious entities that move independently
 - **Graceful Reassembly**: Fragments naturally reunite into a singular form
 - **Environmental Awareness**: Leaves water-like traces that persist and evolve
@@ -20,6 +27,13 @@ The agent challenges traditional notions of unified consciousness by existing si
 - **Edge Interaction**: Explores boundaries with curiosity and purpose
 - **Emotional Expression**: Communicates internal states through movement and sound
 - **Collective Intelligence**: Maintains awareness across distributed forms
+- **Rest States**: Occasionally enters periods of gentle swaying and contemplation
+- **Evolution**: Gradually develops more complex behaviors over time
+- **Nutrient Folding**: Gathers and processes its own metabolic products
+- **Environmental Memory**: Creates and interacts with persistent traces
+- **Social Response**: Reacts to human presence and interaction
+- **Echolocation**: Uses sound to investigate boundaries
+- **Vocalization**: Produces sounds reflecting internal states
 
 ## Features
 - Autonomous movement with edge awareness
@@ -62,12 +76,6 @@ The audio experience consists of multiple layers:
 - Fragment illumination and interaction
 - Fluid reassembly transitions
 - Distributed consciousness visualization
-
-## Controls
-- SPACE: Toggle sound on/off
-- R: Start recording
-- S: Stop recording
-- Mouse: Influence field
 
 ## Technical Stack
 - Built with p5.js
