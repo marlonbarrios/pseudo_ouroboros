@@ -9,49 +9,133 @@
 			margin: 0;
 			padding: 0;
 			overflow: hidden;
-			background: #f0f0f0;
+			background: #000;
+		}
+		#sketch-container {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			z-index: 1;
 		}
 		#sound-icon {
 			position: fixed;
 			top: 20px;
 			right: 20px;
 			padding: 10px;
-			background: rgba(255, 255, 255, 0.8);
+			background: rgba(0, 0, 0, 0.8);
 			border-radius: 5px;
 			font-family: Arial, sans-serif;
 			font-size: 14px;
 			line-height: 1.4;
 			cursor: pointer;
-			z-index: 20;
-			opacity: 0.8;
+			z-index: 2;
+			opacity: 1;
+			color: white;
+			border: 1px solid rgba(255, 255, 255, 0.3);
+			box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 			transition: opacity 0.3s;
 		}
 		#sound-icon:hover {
-			opacity: 1;
-		}
-		canvas {
-			position: fixed !important;
-			top: 0;
-			left: 0;
-			z-index: 15;
+			background: rgba(0, 0, 0, 0.9);
+			border-color: rgba(255, 255, 255, 0.5);
 		}
 		/* Ensure other elements stay below the canvas */
 		.p5Canvas {
 			pointer-events: none;
+			z-index: 1;
+		}
+		#control-panel {
+			position: fixed;
+			top: 20px;
+			right: 20px;
+			padding: 12px;
+			background: rgba(25, 83, 95, 0.5);  /* 50% transparent teal */
+			border-radius: 8px;
+			font-family: 'Arial', sans-serif;
+			color: #f0f3f5;  /* pearl white */
+			z-index: 9999;
+			min-width: 180px;
+			box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+			backdrop-filter: blur(5px);
+			-webkit-backdrop-filter: blur(5px);
+			pointer-events: auto;
+			user-select: none;
+			transition: box-shadow 0.3s ease;
+		}
+		#control-panel:hover {
+			box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+		}
+		#control-panel h3 {
+			margin: 0 0 8px 0;
+			font-size: 14px;
+			text-transform: uppercase;
+			letter-spacing: 1px;
+			color: #f0f3f5;  /* pearl white */
+			font-weight: 700;
+			text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+		}
+		.control-item {
+			margin: 4px 0;
+			font-size: 13px;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 6px;
+			border-radius: 4px;
+			transition: background-color 0.2s;
+		}
+		.control-item:hover {
+			background: rgba(215, 201, 170, 0.2);
+		}
+		.status-indicator {
+			display: inline-block;
+			width: 8px;
+			height: 8px;
+			border-radius: 50%;
+			margin-left: 8px;
+			box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+		}
+		.status-on {
+			background-color: #7b2d26;  /* rust color */
+			box-shadow: 0 0 8px rgba(123, 45, 38, 0.6);
+		}
+		.status-off {
+			background-color: rgba(240, 243, 245, 0.3);  /* dim pearl */
+		}
+		.recording-indicator {
+			background-color: #ff0000;
+			display: none;
+			box-shadow: 0 0 8px rgba(255, 0, 0, 0.6);
+		}
+		#sound-text {
+			margin-right: 8px;
+			font-weight: 500;
 		}
 	</style>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.min.js"></script>
+	<script src="p5.videorecorder.js"></script>
 </head>
 
 <body>
-	<div id="sound-icon">
-		Hints:<br>
-		SPACE: Toggle sound<br>
-		R/S: Record<br>
-		Mouse: Influence field
-		<div id="sound-status" style="margin-top: 5px;">
-			Sound: <span id="sound-dot" style="color: red;">●</span> <span id="sound-text">OFF</span>
+	<div id="sketch-container"></div>
+	<div id="control-panel">
+		<h3>⚙️ Controls</h3>
+		<div class="control-item">
+			<span>🔊 Sound (SPACE)</span>
+			<span>
+				<span id="sound-text">OFF</span>
+				<span class="status-indicator status-off" id="sound-dot"></span>
+			</span>
+		</div>
+		<div class="control-item">
+			<span>⏺️ Recording (R/S)</span>
+			<span class="status-indicator recording-indicator" id="record-dot"></span>
+		</div>
+		<div class="control-item">
+			<span>🖱️ Mouse: Influence field</span>
 		</div>
 	</div>
 	<script src="sketch.js"></script>

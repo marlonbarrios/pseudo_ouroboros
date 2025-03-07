@@ -253,6 +253,151 @@ let volumeNoiseOffset = 0;
 let volumeNoiseSpeed = 0.001;
 let volumeNoiseAmount = 0.3;  // Maximum volume fluctuation (30%)
 
+// Add these variables at the top
+let bgColor = {
+    r: 5,    // Darker base values
+    g: 5,
+    b: 10,
+    targetR: 5,
+    targetG: 5,
+    targetB: 10,
+    noiseOffsetR: 0,
+    noiseOffsetG: 1000,
+    noiseOffsetB: 2000,
+    noiseSpeed: 0.0005,
+    lerpSpeed: 0.005
+};
+
+// Update dayNightCycle object with color parameters
+let dayNightCycle = {
+    hour: 0,
+    brightness: 0,
+    lastUpdate: 0,
+    updateInterval: 1000,
+    activityLevel: 0,
+    minBrightness: 0.02,
+    maxBrightness: 0.2,
+    minActivity: 0.3,
+    maxActivity: 1.5,
+    // Add color parameters for different times of day
+    colors: {
+        night: { r: 15, g: 113, b: 115 },     // "0f7173" Deep teal
+        dawn: { r: 216, g: 164, b: 127 },     // "d8a47f" Warm sand
+        day: { r: 239, g: 131, b: 84 },       // "ef8354" Coral
+        dusk: { r: 238, g: 75, b: 106 },      // "ee4b6a" Rose
+        deepNight: { r: 223, g: 59, b: 87 }   // "df3b57" Deep rose
+    }
+};
+
+// Add these variables at the top
+let timeDisplay = {
+    x: 0,
+    y: 0,
+    padding: 20,
+    fontSize: 16,
+    opacity: 180
+};
+
+// Add organism color palette using the same colors
+let organismColors = {
+    night: {
+        body: { r: 239, g: 131, b: 84, a: 180 },     // "ef8354" Coral
+        glow: { r: 216, g: 164, b: 127, a: 160 }     // "d8a47f" Warm sand
+    },
+    dawn: {
+        body: { r: 238, g: 75, b: 106, a: 160 },     // "ee4b6a" Rose
+        glow: { r: 223, g: 59, b: 87, a: 140 }       // "df3b57" Deep rose
+    },
+    day: {
+        body: { r: 15, g: 113, b: 115, a: 170 },     // "0f7173" Teal
+        glow: { r: 239, g: 131, b: 84, a: 130 }      // "ef8354" Coral
+    },
+    deepNight: {
+        body: { r: 223, g: 59, b: 87, a: 190 },      // "df3b57" Deep rose
+        glow: { r: 238, g: 75, b: 106, a: 170 }      // "ee4b6a" Rose
+    }
+};
+
+// Define the strict color palette
+const PALETTE = {
+    deepTeal: { r: 25, g: 83, b: 95 },    // 19535f
+    jade: { r: 11, g: 122, b: 117 },      // 0b7a75
+    sand: { r: 215, g: 201, b: 170 },     // d7c9aa
+    rust: { r: 123, g: 45, b: 38 },       // 7b2d26
+    pearl: { r: 240, g: 243, b: 245 }     // f0f3f5
+};
+
+// Add these variables for the palette-based sound design
+const SOUND_PALETTE = {
+    warmSand: { freq: 220, // d8a47f - warm, mellow tone
+        modulation: 0.3,
+        resonance: 2 },
+    coral: { freq: 330, // ef8354 - bright, energetic
+        modulation: 0.5,
+        resonance: 3 },
+    rose: { freq: 440, // ee4b6a - higher, shimmering
+        modulation: 0.7,
+        resonance: 4 },
+    deepRose: { freq: 550, // df3b57 - intense, rich
+        modulation: 0.8,
+        resonance: 5 },
+    teal: { freq: 165, // 0f7173 - deep, mysterious
+        modulation: 0.4,
+        resonance: 2.5 }
+};
+
+// Add these variables for spatial audio
+let mainReverb;
+let spatialDelay;
+let spatialFilter;
+let lastPanPosition = 0;
+let panSmoothness = 0.1;
+
+// Update setupAudio function with spatial enhancements
+function setupAudio() {
+    // Create spatial audio effects
+    mainReverb = new Tone.Reverb({
+        decay: 4.0,
+        wet: 0.3,
+        preDelay: 0.2
+    }).toDestination();
+    
+    spatialDelay = new Tone.PingPongDelay({
+        delayTime: 0.3,
+        feedback: 0.2,
+        wet: 0.15
+    }).connect(mainReverb);
+    
+    spatialFilter = new Tone.Filter({
+        frequency: 2000,
+        type: "lowpass",
+        rolloff: -24
+    }).connect(spatialDelay);
+    
+    // Create main panner
+    mainPanner = new Tone.Panner(0).connect(spatialFilter);
+    
+    // Setup oscillator with spatial routing
+    osc = new Tone.Oscillator({
+        frequency: 440,
+        type: "sine",
+        volume: -12
+    }).connect(mainPanner).start();
+    
+    // Setup drone sounds with spatial routing
+    droneOsc1 = new Tone.Oscillator({
+        frequency: 100,
+        type: "sine",
+        volume: -24
+    }).connect(mainPanner).start();
+    
+    droneOsc2 = new Tone.Oscillator({
+        frequency: 150,
+        type: "sine",
+        volume: -24
+    }).connect(mainPanner).start();
+}
+
 function windowResized() {
 	resizeCanvas(windowWidth, windowHeight);
 	// Adjust snake properties based on new canvas size
@@ -461,690 +606,702 @@ function setup() {
 		technoFilter.freq(500);
 		technoDelay.feedback(0);
 	}
+	
+	// Set initial background color
+	background(bgColor.r, bgColor.g, bgColor.b);
 }
 
+// Update draw function to ensure background is updated first
 function draw() {
-	try {
-		// Performance check
-		let currentTime = millis();
-		let frameTime = currentTime - lastFrameTime;
-		if (frameTime > frameTimeThreshold) {
-			// Performance issues detected, reduce complexity
-			cleanupResources();
-		}
-		lastFrameTime = currentTime;
-		
-		// Regular cleanup
-		if (currentTime - lastCleanupTime > cleanupInterval) {
-			cleanupResources();
-			lastCleanupTime = currentTime;
-		}
-		
-		background(240);
-		
-		// Store last valid position
-		if (!lastValidTarget) {
-			lastValidTarget = createVector(segments[0].x, segments[0].y);
-		}
-		
-		// Evolve complexity over time
-		evolveComplexity();
-		
-		// Update movement behavior with evolution
-		if (!mouseIsPressed) {
-			timeSinceLastRest++;
-			
-			// Check if snake should rest
-			if (!isResting && timeSinceLastRest > minTimeBetweenRests && random(1) < 0.005) {
-				isResting = true;
-				restDuration = random(200, 400);  // Rest for 3-6 seconds
-				
-				// Find a rest position near the bottom
-				restPosition = createVector(
-					random(100, width-100),
-					height - random(50, 150)  // Near bottom
-				);
-				
-				// Slow down
-				speedMultiplier = 0.3;
-				edgeExploring = false;
-			}
-			
-			if (isResting) {
-				// Gentle swaying while resting
-				targetX = restPosition.x + sin(frameCount * 0.02) * 15;
-				targetY = restPosition.y + cos(frameCount * 0.02) * 5;
-				
-				restDuration--;
-				if (restDuration <= 0) {
-					isResting = false;
-					timeSinceLastRest = 0;
-					speedMultiplier = 1;
-				}
-			} else if (!edgeExploring) {
-				// Random chance to start edge exploration
-				if (random(1) < 0.02) {
-					edgeExploring = true;
-					edgeTimer = random(200, 400);  // Duration of edge exploration
-					// Choose random point on edge to start
-					let side = floor(random(4));
-					switch(side) {
-						case 0: // top
-							edgePoint = createVector(random(width), 50);
-							break;
-						case 1: // right
-							edgePoint = createVector(width - 50, random(height));
-							break;
-						case 2: // bottom
-							edgePoint = createVector(random(width), height - 50);
-							break;
-						case 3: // left
-							edgePoint = createVector(50, random(height));
-							break;
-					}
-					edgeDirection = random(1) < 0.5 ? 1 : -1;
-				}
-				
-				if (edgeExploring) {
-					// Enhanced sniffing behavior near edges
-					sniffingIntensity = lerp(sniffingIntensity, 1.5, 0.1);  // More intense sniffing
-					sniffingFrequency = map(speedMultiplier, 0.5, 1.2, 0.2, 0.4);  // Faster sniffing
-					
-					// More dramatic edge movement
-					let edgeOffset = sin(frameCount * 0.1) * 30;  // Larger oscillation
-					let investigationDepth = sin(frameCount * 0.05) * 40;  // Deeper investigation
-					
-					// Create investigation particles
-					if (frameCount % 5 === 0) {  // More frequent particles
-						edgeParticles.push({
-							x: segments[0].x + random(-20, 20),
-							y: segments[0].y + random(-20, 20),
-							age: 0,
-							size: random(4, 8),
-							color: color(255, 200, 200, 200)
-						});
-					}
-					
-					// Update edge behavior based on position
-					if (edgePoint.x < 100) {  // Left edge
-						edgePoint.y += edgeDirection * 3;  // Faster movement
-						targetX = 50 + edgeOffset;
-						targetY = edgePoint.y + investigationDepth;
-						edgeIntensity = map(segments[0].x, 100, 0, 0, 1);
-					} else if (edgePoint.x > width - 100) {  // Right edge
-						edgePoint.y += edgeDirection * 3;
-						targetX = width - 50 + edgeOffset;
-						targetY = edgePoint.y + investigationDepth;
-						edgeIntensity = map(segments[0].x, width-100, width, 0, 1);
-					} else if (edgePoint.y < 100) {  // Top edge
-						edgePoint.x += edgeDirection * 3;
-						targetX = edgePoint.x + investigationDepth;
-						targetY = 50 + edgeOffset;
-						edgeIntensity = map(segments[0].y, 100, 0, 0, 1);
-					} else {  // Bottom edge
-						edgePoint.x += edgeDirection * 3;
-						targetX = edgePoint.x + investigationDepth;
-						targetY = height - 50 + edgeOffset;
-						edgeIntensity = map(segments[0].y, height-100, height, 0, 1);
-					}
-					
-					// Update and draw edge particles
-					for (let i = edgeParticles.length - 1; i >= 0; i--) {
-						let p = edgeParticles[i];
-						p.age += 0.05;
-						
-						// Particle movement
-						let angle = noise(p.x * 0.01, p.y * 0.01, frameCount * 0.02) * TWO_PI;
-						p.x += cos(angle) * 2;
-						p.y += sin(angle) * 2;
-						
-						// Draw particle with glow
-						noStroke();
-						for (let j = 3; j > 0; j--) {
-							let alpha = map(j, 3, 0, 50, 150) * (1 - p.age);
-							p.color.setAlpha(alpha);
-							fill(p.color);
-							circle(p.x, p.y, p.size * j);
-						}
-						
-						// Remove old particles
-						if (p.age > 1) {
-							edgeParticles.splice(i, 1);
-						}
-					}
-					
-					// Add extra glow when near edges
-					headGlow = max(headGlow, edgeIntensity * 2);
-				}
-			}
-			
-			// Add safety checks for evolution-based movement
-			if (!mouseIsPressed && !isResting && !edgeExploring) {
-				let safeComplexity = constrain(complexityLevel, 0, maxComplexity);
-				
-				// Safe movement calculations
-				let evolutionNoise = noise(
-					frameCount * constrain(0.01 + safeComplexity * 0.005, 0, 0.1),
-					safeComplexity * 100
-				) * safeComplexity;
-				
-				// Constrain movement additions
-				let xAdd = sin(frameCount * (0.02 + safeComplexity * 0.01)) * (10 + safeComplexity * 5);
-				let yAdd = cos(frameCount * (0.015 + safeComplexity * 0.01)) * (10 + safeComplexity * 5);
-				
-				targetX += constrain(xAdd, -50, 50);
-				targetY += constrain(yAdd, -50, 50);
-				
-				// Safe circular patterns
-				let radius = constrain(50 + safeComplexity * 20, 0, 200);
-				let angle = frameCount * constrain(0.02 + safeComplexity * 0.01, 0, 0.1);
-				
-				targetX += constrain(sin(angle) * radius * evolutionNoise, -100, 100);
-				targetY += constrain(cos(angle * 1.5) * radius * evolutionNoise, -100, 100);
-				
-				// Ensure targets stay within bounds
-				targetX = constrain(targetX, 50, width - 50);
-				targetY = constrain(targetY, 50, height - 50);
-			}
-			
-			// Adjust speed multiplier based on complexity
-			speedMultiplier = constrain(1 + complexityLevel * 0.2, 0.5, 2.5);
-		} else {
-			// Reset rest state when mouse is pressed
-			isResting = false;
-			timeSinceLastRest = 0;
-			// Go towards mouse position
-			targetX = mouseX;
-			targetY = mouseY;
-			
-			// Increase speed when chasing mouse
-			speedMultiplier = 2;
-			
-			// Disable edge exploring when following mouse
-			edgeExploring = false;
-		}
-		
-		// Add edge containment before updating position
-		let head = segments[0];
-		let containmentForce = createVector(0, 0);
-		
-		// Left edge
-		if (head.x < edgeBuffer) {
-			containmentForce.x += edgeForce * (edgeBuffer - head.x) / edgeBuffer;
-		}
-		// Right edge
-		if (head.x > width - edgeBuffer) {
-			containmentForce.x -= edgeForce * (head.x - (width - edgeBuffer)) / edgeBuffer;
-		}
-		// Top edge
-		if (head.y < edgeBuffer) {
-			containmentForce.y += edgeForce * (edgeBuffer - head.y) / edgeBuffer;
-		}
-		// Bottom edge
-		if (head.y > height - edgeBuffer) {
-			containmentForce.y -= edgeForce * (head.y - (height - edgeBuffer)) / edgeBuffer;
-		}
-		
-		// Apply containment force to target position
-		targetX += containmentForce.x * 10;
-		targetY += containmentForce.y * 10;
-		
-		// Ensure target stays within bounds
-		targetX = constrain(targetX, edgeBuffer, width - edgeBuffer);
-		targetY = constrain(targetY, edgeBuffer, height - edgeBuffer);
-		
-		// Update segment positions with edge awareness
-		for (let i = 0; i < segments.length; i++) {
-			let segment = segments[i];
-			
-			// Add edge repulsion to each segment
-			if (segment.x < edgeBuffer) {
-				segment.x += edgeForce * 2;
-			}
-			if (segment.x > width - edgeBuffer) {
-				segment.x -= edgeForce * 2;
-			}
-			if (segment.y < edgeBuffer) {
-				segment.y += edgeForce * 2;
-			}
-			if (segment.y > height - edgeBuffer) {
-				segment.y -= edgeForce * 2;
-			}
-			
-			// Ensure segments stay within bounds
-			segment.x = constrain(segment.x, 0, width);
-			segment.y = constrain(segment.y, 0, height);
-		}
-		
-		// Add organic movement with minimum intensity
-		let noiseIntensity = map(speedMultiplier, 0.1, 3, 0.5, 2);
-		noiseIntensity = max(noiseIntensity, 0.2);  // Ensure minimum noise movement
-		let organicX = targetX + map(noise(noiseOffsetX), 0, 1, -noiseAmount * noiseIntensity, noiseAmount * noiseIntensity);
-		let organicY = targetY + map(noise(noiseOffsetY), 0, 1, -noiseAmount * noiseIntensity, noiseAmount * noiseIntensity);
-		
-		// Move head towards target with guaranteed minimum movement
-		let easing = max(0.08 * speedMultiplier, 0.01);
-		segments[0].x += (organicX - segments[0].x) * easing;
-		segments[0].y += (organicY - segments[0].y) * easing;
-		
-		// Ensure continuous noise offset updatesrr
-		noiseOffsetX += max(noiseSpeed, 0.01);
-		noiseOffsetY += max(noiseSpeed, 0.01);
-		
-		// Update all other segments
-		for (let i = 0; i < points - 1; i++) {
-			let segment = segments[i]; 
-			let nextSegment = segments[i + 1];
-			let vector = p5.Vector.sub(segment, nextSegment);
-			vector.setMag(segmentLength);
-			nextSegment.x = segment.x - vector.x;
-			nextSegment.y = segment.y - vector.y;
-		}
-		
-		// Calculate movement amount
-		if (!lastPosition) {
-			lastPosition = createVector(segments[0].x, segments[0].y);
-		} else {
-			let currentMovement = dist(segments[0].x, segments[0].y, lastPosition.x, lastPosition.y);
-			movementAmount = lerp(movementAmount, currentMovement, 0.1);
-			lastPosition.set(segments[0].x, segments[0].y);
-		}
-		
-		// Calculate edge proximity glow
-		let edgeProximity = min(
-			head.x,  // Distance from left
-			width - head.x,  // Distance from right
-			head.y,  // Distance from top
-			height - head.y  // Distance from bottom
-		);
-		
-		// Increase glow when near edges
-		if (edgeProximity < edgeGlowDistance) {
-			let glowIntensity = map(edgeProximity, 0, edgeGlowDistance, maxGlow, 0);
-			headGlow = lerp(headGlow, glowIntensity, 0.1);
-		}
-		
-		// Update trail
-		trail.push(createVector(segments[0].x, segments[0].y));
-		trailOpacity.push(0.4);  // Lower initial opacity for water effect
-		
-		if (trail.length > trailLength) {
-			trail.shift();
-			trailOpacity.shift();
-		}
-		
-		// Draw nutrients FIRST (before trail and snake)
-		for (let i = nutrients.length - 1; i >= 0; i--) {
-			let nutrient = nutrients[i];
-			
-			// Age the nutrient more slowly
-			nutrient.age += 0.0005;
-			nutrient.opacity *= 0.9995;  // Slower fade
-			
-			// Draw nutrient with stronger visibility
-			noStroke();
-			
-			// Draw larger glow effect
-			for (let j = 4; j > 0; j--) {
-				let glowSize = nutrient.size * j * 1.5;
-				let glowAlpha = (nutrient.opacity * 255) / (j * 1.5);
-				fill(nutrient.color.levels[0], 
-					 nutrient.color.levels[1], 
-					 nutrient.color.levels[2], 
-					 glowAlpha);
-				circle(nutrient.x, nutrient.y, glowSize);
-			}
-			
-			// Draw core of particle
-			fill(nutrient.color.levels[0], 
-				 nutrient.color.levels[1], 
-				 nutrient.color.levels[2], 
-				 nutrient.opacity * 255);
-			circle(nutrient.x, nutrient.y, nutrient.size);
-			
-			// More noticeable movement
-			nutrient.x += sin(frameCount * 0.03 + i) * 0.5;
-			nutrient.y += cos(frameCount * 0.03 + i) * 0.5;
-			
-			// More dramatic absorption effect
-			let d = dist(head.x, head.y, nutrient.x, nutrient.y);
-			
-			if (d < reabsorptionRadius) {
-				let reabsorptionRate = map(d, 0, reabsorptionRadius, 0.3, 0.01);
-				nutrient.opacity -= reabsorptionRate;
-				
-				// Stronger glow effect on absorption
-				headGlow = min(headGlow + reabsorptionRate * 1.5, maxGlow);
-				
-				// More dramatic absorption movement
-				let angle = atan2(head.y - nutrient.y, head.x - nutrient.x);
-				nutrient.x += cos(angle) * reabsorptionRate * 6;
-				nutrient.y += sin(angle) * reabsorptionRate * 6;
-			}
-			
-			// Remove old or fully absorbed nutrients
-			if (nutrient.opacity < 0.01 || nutrient.age > 8) {
-				nutrients.splice(i, 1);
-			}
-		}
-		
-		// Draw trail first (underneath the snake)
-		noFill();
-		for (let i = 0; i < trail.length - 1; i++) {
-			let alpha = trailOpacity[i] * 255;
-			if (alpha > 1) {  // Lower threshold for visibility
-				// Add gentle ripple effect
-				let ripple = sin(frameCount * 0.05 + i * 0.1) * 1.5;
-				
-				// Trail gets slightly wider as it ages
-				let ageSpread = map(i, 0, trail.length, 0, trailSpread);
-				let currentWidth = trailWidth + ageSpread + ripple;
-				
-				strokeWeight(currentWidth);
-				
-				// Water-like blue tint with transparency
-				let blueShade = map(i, 0, trail.length, 200, 180);
-				stroke(180, blueShade, 255, alpha * 0.25);  // More translucent blue
-				
-				// Draw with slight curve for fluid look
-				beginShape();
-				curveVertex(trail[i].x, trail[i].y);
-				curveVertex(trail[i].x, trail[i].y);
-				curveVertex(trail[i+1].x, trail[i+1].y);
-				curveVertex(trail[i+1].x, trail[i+1].y);
-				endShape();
-			}
-			
-			// Slower fade for water persistence
-			trailOpacity[i] *= trailDecay;
-			
-			// Very subtle movement to simulate water settling
-			let ageFactor = map(i, 0, trail.length, 0.1, 0.01);
-			trail[i].x += sin(frameCount * 0.01 + i * 0.1) * ageFactor;
-			trail[i].y += cos(frameCount * 0.01 + i * 0.1) * ageFactor;
-		}
-		
-		// Update trail with current position
-		if (frameCount % 2 === 0) {  // Add points less frequently for smoother trail
-			trail.push(createVector(segments[0].x, segments[0].y));
-			trailOpacity.push(0.5);  // Higher initial opacity
-			
-			if (trail.length > trailLength) {
-				trail.shift();
-				trailOpacity.shift();
-			}
-		}
-		
-		// Draw the snake
-		noFill();
-		
-		// Draw glow layers for head
-		if (headGlow > 0.1) {
-			let glowLayers = 3;
-			for (let i = glowLayers; i > 0; i--) {
-				strokeWeight(100 + i * 20 * headGlow);
-				let alpha = map(i, 0, glowLayers, 20, 80) * headGlow;
-				stroke(255, 100, 100, alpha);
-				beginShape();
-				curveVertex(head.x, head.y);
-				curveVertex(head.x, head.y);
-				curveVertex(segments[1].x, segments[1].y);
-				curveVertex(segments[2].x, segments[2].y);
-				curveVertex(segments[2].x, segments[2].y);
-				endShape();
-			}
-		}
-		
-		// Draw black outline
-		strokeWeight(100);
-		strokeCap(ROUND);
-		stroke(0, 180);
-		
-		beginShape();
-		curveVertex(segments[0].x, segments[0].y);
-		for (let segment of segments) {
-			curveVertex(segment.x, segment.y);
-		}
-		curveVertex(segments[segments.length-1].x, segments[segments.length-1].y);
-		endShape();
-		
-		// Draw colored body with glow influence
-		strokeWeight(28);
-		strokeCap(ROUND);
-		
-		if (mouseIsPressed) {
-			stroke(224, 130, 133);
-		} else {
-			let r, g, b;
-			if (isResting) {
-				r = map(sin(frameCount * 0.02), -1, 1, 160, 200);
-				g = map(sin(frameCount * 0.02), -1, 1, 15, 30);
-				b = map(sin(frameCount * 0.02), -1, 1, 20, 40);
-			} else {
-				r = map(speedMultiplier, 0.1, 3, 180, 255) + headGlow * 50;
-				g = map(speedMultiplier, 0.1, 3, 20, 50);
-				b = map(speedMultiplier, 0.1, 3, 27, 60);
-			}
-			stroke(r, g, b);
-		}
-		
-		beginShape();
-		curveVertex(segments[0].x, segments[0].y);
-		for (let segment of segments) {
-			curveVertex(segment.x, segment.y);
-		}
-		curveVertex(segments[segments.length-1].x, segments[segments.length-1].y);
-		endShape();
-		
-		// Decay glow
-		headGlow *= glowDecay;
-		
-		// Simpler sound generation based on movement
-		if (soundEnabled && frameCount % 3 === 0) {  // Check every 3 frames
-			let speed = dist(segments[0].x, segments[0].y, lastPosition.x, lastPosition.y);
-			
-			if (speed > soundThreshold) {
-				makeUnderwaterSound(speed / 10);
-			} else if (random(1) < 0.05) {  // Occasional ambient sounds
-				makeUnderwaterSound(0.2);
-			}
-		}
-		
-		// Update drone sounds
-		updateDrone();
-		
-		// Only draw UI elements if showUI is true
-		if (showUI) {
-			// Draw recording indicator
-			if (recording) {
-				noStroke();
-				fill(255, 0, 0);
-				ellipse(width - 20, 20, 10, 10);
-				
-				textAlign(RIGHT);
-				textSize(16);
-				fill(255, 0, 0);
-				text('Recording...', width - 40, 25);
-			}
-		}
-		
-		// Add echolocation clicks when exploring
-		if (edgeExploring && soundEnabled) {
-			makeClickSound();
-		}
-		
-		if (!isResting && !edgeExploring && random(1) < 0.01) {
-			selfExploring = true;
-			selfExploreTimer = random(100, 200);
-			// Choose random segment to explore (not too close to head)
-			selfExploreTarget = floor(random(5, segments.length - 1));
-		}
-		
-		if (selfExploring) {
-			let target = segments[selfExploreTarget];
-			targetX = target.x + sin(frameCount * 0.1) * 20;
-			targetY = target.y + cos(frameCount * 0.1) * 20;
-			
-			// Calculate distance to target segment
-			let distToTarget = dist(segments[0].x, segments[0].y, target.x, target.y);
-			
-			// Make squeak sound based on proximity
-			if (distToTarget < 50) {
-				let intensity = map(distToTarget, 50, 10, 0, 1, true);
-				makeSqueakSound(intensity);
-			}
-			
-			selfExploreTimer--;
-			if (selfExploreTimer <= 0) {
-				selfExploring = false;
-			}
-		}
-		
-		// Draw body glow
-		noFill();
-		strokeCap(ROUND);
-		
-		// Draw glow for each segment
-		for (let i = 0; i < segments.length - 1; i++) {
-			if (bodyGlow[i] > 0.1) {
-				let glowLayers = 3;
-				for (let j = glowLayers; j > 0; j--) {
-					let glowSize = 28 + j * 20 * bodyGlow[i];
-					let alpha = map(j, 0, glowLayers, 20, 60) * bodyGlow[i];
-					
-					// Adjust color based on interaction type
-					let r = 255;
-					let g = selfExploring ? map(bodyGlow[i], 0, maxBodyGlow, 100, 180) : 100;
-					let b = selfExploring ? map(bodyGlow[i], 0, maxBodyGlow, 100, 150) : 100;
-					
-					strokeWeight(glowSize);
-					stroke(r, g, b, alpha);
-					line(segments[i].x, segments[i].y, segments[i+1].x, segments[i+1].y);
-				}
-			}
-			
-			// Decay glow
-			bodyGlow[i] *= bodyGlowDecay;
-		}
-		
-		// Random chance to fragment
-		if (!fragmenting && !reassembling && random(1) < 0.001) {
-			startFragmentation();
-		}
-		
-		if (fragmenting) {
-			updateFragments();
-			fragmentTimer++;
-			
-			if (fragmentTimer > fragmentDuration) {
-				startReassembly();
-			}
-		}
-		
-		if (reassembling) {
-			updateReassembly();
-		}
-		
-		// Update metabolic cycle
-		metabolicTimer += metabolicRate;
-		
-		// Create new particles
-		if (random(1) < metabolicRate && nutrients.length < maxNutrients) {
-			let segmentIndex = floor(random(segments.length));
-			let segment = segments[segmentIndex];
-			
-			nutrients.push({
-				x: segment.x + random(-10, 10),
-				y: segment.y + random(-10, 10),
-				age: 0,
-				size: random(8, 15),  // Larger size
-				opacity: random(0.8, 1.0),  // Higher opacity
-				color: color(220 + random(-20, 20), 
-						240 + random(-20, 20), 
-						255, 
-						255),  // Brighter color
-				glowSize: random(2, 3)  // Variable glow size
-			});
-		}
-		
-		// Check for nutrient clusters to fold
-		if (!foldingNutrients && nutrients.length > 10 && !isProcessingCluster) {
-			let clusters = findNutrientClusters();
-			if (clusters && clusters.length > 0) {
-				let validCluster = clusters.find(c => 
-					c && c.nutrients && c.nutrients.length > 5);
-				if (validCluster) {
-					startFolding(validCluster);
-				}
-			}
-		}
-		
-		if (foldingNutrients) {
-			updateFolding();
-		}
-		
-		// Safe nutrient updates
-		if (nutrients && Array.isArray(nutrients)) {
-			nutrients = nutrients.filter(n => n && typeof n.age === 'number');
-			
-			if (nutrients.length > maxNutrients) {
-				nutrients.length = maxNutrients;
-			}
-		} else {
-			nutrients = [];
-		}
-		
-		// Add this to draw function to update absorption particles
-		if (absorptionParticles.length > 0) {
-			for (let i = absorptionParticles.length - 1; i >= 0; i--) {
-				let p = absorptionParticles[i];
-				p.x += p.vx;
-				p.y += p.vy;
-				p.life *= 0.9;
-				
-				// Draw particle
-				noStroke();
-				fill(220, 240, 255, p.life * 255);
-				circle(p.x, p.y, p.life * 8);
-				
-				if (p.life < 0.01) {
-					absorptionParticles.splice(i, 1);
-				}
-			}
-		}
-		
-		// Update and draw food particles
-		updateFoodParticles();
-		
-		// Update digestion effects
-		updateDigestionEffects();
-		
-		// Add food attraction behavior
-		if (foodParticles.length > 0) {
-			attractToFood();
-		}
-		
-		updateSpawnEffects();
-		
-		// Update ambient sound
-		updateAmbientSound();
-		
-		updateEvolution();
-		
-		// Only process movement if awakening has started
-		if (evolutionState.awakening > 0) {
-			let movementScale = evolutionState.movement;
-			targetX += random(-noiseAmount, noiseAmount) * movementScale;
-			targetY += random(-noiseAmount, noiseAmount) * movementScale;
-		}
-		
-	} catch (e) {
-		console.error('Draw error:', e);
-		// Reset critical states
-		foldingNutrients = false;
-		isProcessingCluster = false;
-		nutrients = [];
-	}
+    try {
+        // Clear and update background at the start of each frame
+        clear();  // Clear previous frame
+        updateBackground();  // Apply new background color
+        
+        // Performance check
+        let currentTime = millis();
+        let frameTime = currentTime - lastFrameTime;
+        if (frameTime > frameTimeThreshold) {
+            // Performance issues detected, reduce complexity
+            cleanupResources();
+        }
+        lastFrameTime = currentTime;
+        
+        // Regular cleanup
+        if (currentTime - lastCleanupTime > cleanupInterval) {
+            cleanupResources();
+            lastCleanupTime = currentTime;
+        }
+        
+        // Store last valid position
+        if (!lastValidTarget) {
+            lastValidTarget = createVector(segments[0].x, segments[0].y);
+        }
+        
+        // Evolve complexity over time
+        evolveComplexity();
+        
+        // Update movement behavior with evolution
+        if (!mouseIsPressed) {
+            timeSinceLastRest++;
+            
+            // Check if snake should rest
+            if (!isResting && timeSinceLastRest > minTimeBetweenRests && random(1) < 0.005) {
+                isResting = true;
+                restDuration = random(200, 400);  // Rest for 3-6 seconds
+                
+                // Find a rest position near the bottom
+                restPosition = createVector(
+                    random(100, width-100),
+                    height - random(50, 150)  // Near bottom
+                );
+                
+                // Slow down
+                speedMultiplier = 0.3;
+                edgeExploring = false;
+            }
+            
+            if (isResting) {
+                // Gentle swaying while resting
+                targetX = restPosition.x + sin(frameCount * 0.02) * 15;
+                targetY = restPosition.y + cos(frameCount * 0.02) * 5;
+                
+                restDuration--;
+                if (restDuration <= 0) {
+                    isResting = false;
+                    timeSinceLastRest = 0;
+                    speedMultiplier = 1;
+                }
+            } else if (!edgeExploring) {
+                // Random chance to start edge exploration
+                if (random(1) < 0.02) {
+                    edgeExploring = true;
+                    edgeTimer = random(200, 400);  // Duration of edge exploration
+                    // Choose random point on edge to start
+                    let side = floor(random(4));
+                    switch(side) {
+                        case 0: // top
+                            edgePoint = createVector(random(width), 50);
+                            break;
+                        case 1: // right
+                            edgePoint = createVector(width - 50, random(height));
+                            break;
+                        case 2: // bottom
+                            edgePoint = createVector(random(width), height - 50);
+                            break;
+                        case 3: // left
+                            edgePoint = createVector(50, random(height));
+                            break;
+                    }
+                    edgeDirection = random(1) < 0.5 ? 1 : -1;
+                }
+                
+                if (edgeExploring) {
+                    // Enhanced sniffing behavior near edges
+                    sniffingIntensity = lerp(sniffingIntensity, 1.5, 0.1);  // More intense sniffing
+                    sniffingFrequency = map(speedMultiplier, 0.5, 1.2, 0.2, 0.4);  // Faster sniffing
+                    
+                    // More dramatic edge movement
+                    let edgeOffset = sin(frameCount * 0.1) * 30;  // Larger oscillation
+                    let investigationDepth = sin(frameCount * 0.05) * 40;  // Deeper investigation
+                    
+                    // Create investigation particles
+                    if (frameCount % 5 === 0) {  // More frequent particles
+                        edgeParticles.push({
+                            x: segments[0].x + random(-20, 20),
+                            y: segments[0].y + random(-20, 20),
+                            age: 0,
+                            size: random(4, 8),
+                            color: color(255, 200, 200, 200)
+                        });
+                    }
+                    
+                    // Update edge behavior based on position
+                    if (edgePoint.x < 100) {  // Left edge
+                        edgePoint.y += edgeDirection * 3;  // Faster movement
+                        targetX = 50 + edgeOffset;
+                        targetY = edgePoint.y + investigationDepth;
+                        edgeIntensity = map(segments[0].x, 100, 0, 0, 1);
+                    } else if (edgePoint.x > width - 100) {  // Right edge
+                        edgePoint.y += edgeDirection * 3;
+                        targetX = width - 50 + edgeOffset;
+                        targetY = edgePoint.y + investigationDepth;
+                        edgeIntensity = map(segments[0].x, width-100, width, 0, 1);
+                    } else if (edgePoint.y < 100) {  // Top edge
+                        edgePoint.x += edgeDirection * 3;
+                        targetX = edgePoint.x + investigationDepth;
+                        targetY = 50 + edgeOffset;
+                        edgeIntensity = map(segments[0].y, 100, 0, 0, 1);
+                    } else {  // Bottom edge
+                        edgePoint.x += edgeDirection * 3;
+                        targetX = edgePoint.x + investigationDepth;
+                        targetY = height - 50 + edgeOffset;
+                        edgeIntensity = map(segments[0].y, height-100, height, 0, 1);
+                    }
+                    
+                    // Update and draw edge particles
+                    for (let i = edgeParticles.length - 1; i >= 0; i--) {
+                        let p = edgeParticles[i];
+                        p.age += 0.05;
+                        
+                        // Particle movement
+                        let angle = noise(p.x * 0.01, p.y * 0.01, frameCount * 0.02) * TWO_PI;
+                        p.x += cos(angle) * 2;
+                        p.y += sin(angle) * 2;
+                        
+                        // Draw particle with glow
+                        noStroke();
+                        for (let j = 3; j > 0; j--) {
+                            let alpha = map(j, 3, 0, 50, 150) * (1 - p.age);
+                            p.color.setAlpha(alpha);
+                            fill(p.color);
+                            circle(p.x, p.y, p.size * j);
+                        }
+                        
+                        // Remove old particles
+                        if (p.age > 1) {
+                            edgeParticles.splice(i, 1);
+                        }
+                    }
+                    
+                    // Add extra glow when near edges
+                    headGlow = max(headGlow, edgeIntensity * 2);
+                }
+            }
+            
+            // Add safety checks for evolution-based movement
+            if (!mouseIsPressed && !isResting && !edgeExploring) {
+                let safeComplexity = constrain(complexityLevel, 0, maxComplexity);
+                
+                // Safe movement calculations
+                let evolutionNoise = noise(
+                    frameCount * constrain(0.01 + safeComplexity * 0.005, 0, 0.1),
+                    safeComplexity * 100
+                ) * safeComplexity;
+                
+                // Constrain movement additions
+                let xAdd = sin(frameCount * (0.02 + safeComplexity * 0.01)) * (10 + safeComplexity * 5);
+                let yAdd = cos(frameCount * (0.015 + safeComplexity * 0.01)) * (10 + safeComplexity * 5);
+                
+                targetX += constrain(xAdd, -50, 50);
+                targetY += constrain(yAdd, -50, 50);
+                
+                // Safe circular patterns
+                let radius = constrain(50 + safeComplexity * 20, 0, 200);
+                let angle = frameCount * constrain(0.02 + safeComplexity * 0.01, 0, 0.1);
+                
+                targetX += constrain(sin(angle) * radius * evolutionNoise, -100, 100);
+                targetY += constrain(cos(angle * 1.5) * radius * evolutionNoise, -100, 100);
+                
+                // Ensure targets stay within bounds
+                targetX = constrain(targetX, 50, width - 50);
+                targetY = constrain(targetY, 50, height - 50);
+            }
+            
+            // Adjust speed multiplier based on complexity
+            speedMultiplier = constrain(1 + complexityLevel * 0.2, 0.5, 2.5);
+        } else {
+            // Reset rest state when mouse is pressed
+            isResting = false;
+            timeSinceLastRest = 0;
+            // Go towards mouse position
+            targetX = mouseX;
+            targetY = mouseY;
+            
+            // Increase speed when chasing mouse
+            speedMultiplier = 2;
+            
+            // Disable edge exploring when following mouse
+            edgeExploring = false;
+        }
+        
+        // Add edge containment before updating position
+        let head = segments[0];
+        let containmentForce = createVector(0, 0);
+        
+        // Left edge
+        if (head.x < edgeBuffer) {
+            containmentForce.x += edgeForce * (edgeBuffer - head.x) / edgeBuffer;
+        }
+        // Right edge
+        if (head.x > width - edgeBuffer) {
+            containmentForce.x -= edgeForce * (head.x - (width - edgeBuffer)) / edgeBuffer;
+        }
+        // Top edge
+        if (head.y < edgeBuffer) {
+            containmentForce.y += edgeForce * (edgeBuffer - head.y) / edgeBuffer;
+        }
+        // Bottom edge
+        if (head.y > height - edgeBuffer) {
+            containmentForce.y -= edgeForce * (head.y - (height - edgeBuffer)) / edgeBuffer;
+        }
+        
+        // Apply containment force to target position
+        targetX += containmentForce.x * 10;
+        targetY += containmentForce.y * 10;
+        
+        // Ensure target stays within bounds
+        targetX = constrain(targetX, edgeBuffer, width - edgeBuffer);
+        targetY = constrain(targetY, edgeBuffer, height - edgeBuffer);
+        
+        // Update segment positions with edge awareness
+        for (let i = 0; i < segments.length; i++) {
+            let segment = segments[i];
+            
+            // Add edge repulsion to each segment
+            if (segment.x < edgeBuffer) {
+                segment.x += edgeForce * 2;
+            }
+            if (segment.x > width - edgeBuffer) {
+                segment.x -= edgeForce * 2;
+            }
+            if (segment.y < edgeBuffer) {
+                segment.y += edgeForce * 2;
+            }
+            if (segment.y > height - edgeBuffer) {
+                segment.y -= edgeForce * 2;
+            }
+            
+            // Ensure segments stay within bounds
+            segment.x = constrain(segment.x, 0, width);
+            segment.y = constrain(segment.y, 0, height);
+        }
+        
+        // Add organic movement with minimum intensity
+        let noiseIntensity = map(speedMultiplier, 0.1, 3, 0.5, 2);
+        noiseIntensity = max(noiseIntensity, 0.2);  // Ensure minimum noise movement
+        let organicX = targetX + map(noise(noiseOffsetX), 0, 1, -noiseAmount * noiseIntensity, noiseAmount * noiseIntensity);
+        let organicY = targetY + map(noise(noiseOffsetY), 0, 1, -noiseAmount * noiseIntensity, noiseAmount * noiseIntensity);
+        
+        // Move head towards target with guaranteed minimum movement
+        let easing = max(0.08 * speedMultiplier, 0.01);
+        segments[0].x += (organicX - segments[0].x) * easing;
+        segments[0].y += (organicY - segments[0].y) * easing;
+        
+        // Ensure continuous noise offset updatesrr
+        noiseOffsetX += max(noiseSpeed, 0.01);
+        noiseOffsetY += max(noiseSpeed, 0.01);
+        
+        // Update all other segments
+        for (let i = 0; i < points - 1; i++) {
+            let segment = segments[i]; 
+            let nextSegment = segments[i + 1];
+            let vector = p5.Vector.sub(segment, nextSegment);
+            vector.setMag(segmentLength);
+            nextSegment.x = segment.x - vector.x;
+            nextSegment.y = segment.y - vector.y;
+        }
+        
+        // Calculate movement amount
+        if (!lastPosition) {
+            lastPosition = createVector(segments[0].x, segments[0].y);
+        } else {
+            let currentMovement = dist(segments[0].x, segments[0].y, lastPosition.x, lastPosition.y);
+            movementAmount = lerp(movementAmount, currentMovement, 0.1);
+            lastPosition.set(segments[0].x, segments[0].y);
+        }
+        
+        // Calculate edge proximity glow
+        let edgeProximity = min(
+            head.x,  // Distance from left
+            width - head.x,  // Distance from right
+            head.y,  // Distance from top
+            height - head.y  // Distance from bottom
+        );
+        
+        // Increase glow when near edges
+        if (edgeProximity < edgeGlowDistance) {
+            let glowIntensity = map(edgeProximity, 0, edgeGlowDistance, maxGlow, 0);
+            headGlow = lerp(headGlow, glowIntensity, 0.1);
+        }
+        
+        // Update trail
+        trail.push(createVector(segments[0].x, segments[0].y));
+        trailOpacity.push(0.4);  // Lower initial opacity for water effect
+        
+        if (trail.length > trailLength) {
+            trail.shift();
+            trailOpacity.shift();
+        }
+        
+        // Draw nutrients FIRST (before trail and snake)
+        for (let i = nutrients.length - 1; i >= 0; i--) {
+            let nutrient = nutrients[i];
+            
+            // Age the nutrient more slowly
+            nutrient.age += 0.0005;
+            nutrient.opacity *= 0.9995;  // Slower fade
+            
+            // Draw nutrient with stronger visibility
+            noStroke();
+            
+            // Draw larger glow effect
+            for (let j = 4; j > 0; j--) {
+                let glowSize = nutrient.size * j * 1.5;
+                let glowAlpha = (nutrient.opacity * 255) / (j * 1.5);
+                fill(nutrient.color.levels[0], 
+                     nutrient.color.levels[1], 
+                     nutrient.color.levels[2], 
+                     glowAlpha);
+                circle(nutrient.x, nutrient.y, glowSize);
+            }
+            
+            // Draw core of particle
+            fill(nutrient.color.levels[0], 
+                 nutrient.color.levels[1], 
+                 nutrient.color.levels[2], 
+                 nutrient.opacity * 255);
+            circle(nutrient.x, nutrient.y, nutrient.size);
+            
+            // More noticeable movement
+            nutrient.x += sin(frameCount * 0.03 + i) * 0.5;
+            nutrient.y += cos(frameCount * 0.03 + i) * 0.5;
+            
+            // More dramatic absorption effect
+            let d = dist(head.x, head.y, nutrient.x, nutrient.y);
+            
+            if (d < reabsorptionRadius) {
+                let reabsorptionRate = map(d, 0, reabsorptionRadius, 0.3, 0.01);
+                nutrient.opacity -= reabsorptionRate;
+                
+                // Stronger glow effect on absorption
+                headGlow = min(headGlow + reabsorptionRate * 1.5, maxGlow);
+                
+                // More dramatic absorption movement
+                let angle = atan2(head.y - nutrient.y, head.x - nutrient.x);
+                nutrient.x += cos(angle) * reabsorptionRate * 6;
+                nutrient.y += sin(angle) * reabsorptionRate * 6;
+            }
+            
+            // Remove old or fully absorbed nutrients
+            if (nutrient.opacity < 0.01 || nutrient.age > 8) {
+                nutrients.splice(i, 1);
+            }
+        }
+        
+        // Draw trail first (underneath the snake)
+        noFill();
+        for (let i = 0; i < trail.length - 1; i++) {
+            let alpha = trailOpacity[i] * 255;
+            if (alpha > 1) {  // Lower threshold for visibility
+                // Add gentle ripple effect
+                let ripple = sin(frameCount * 0.05 + i * 0.1) * 1.5;
+                
+                // Trail gets slightly wider as it ages
+                let ageSpread = map(i, 0, trail.length, 0, trailSpread);
+                let currentWidth = trailWidth + ageSpread + ripple;
+                
+                strokeWeight(currentWidth);
+                
+                // Water-like blue tint with transparency
+                let blueShade = map(i, 0, trail.length, 200, 180);
+                stroke(180, blueShade, 255, alpha * 0.25);  // More translucent blue
+                
+                // Draw with slight curve for fluid look
+                beginShape();
+                curveVertex(trail[i].x, trail[i].y);
+                curveVertex(trail[i].x, trail[i].y);
+                curveVertex(trail[i+1].x, trail[i+1].y);
+                curveVertex(trail[i+1].x, trail[i+1].y);
+                endShape();
+            }
+            
+            // Slower fade for water persistence
+            trailOpacity[i] *= trailDecay;
+            
+            // Very subtle movement to simulate water settling
+            let ageFactor = map(i, 0, trail.length, 0.1, 0.01);
+            trail[i].x += sin(frameCount * 0.01 + i * 0.1) * ageFactor;
+            trail[i].y += cos(frameCount * 0.01 + i * 0.1) * ageFactor;
+        }
+        
+        // Update trail with current position
+        if (frameCount % 2 === 0) {  // Add points less frequently for smoother trail
+            trail.push(createVector(segments[0].x, segments[0].y));
+            trailOpacity.push(0.5);  // Higher initial opacity
+            
+            if (trail.length > trailLength) {
+                trail.shift();
+                trailOpacity.shift();
+            }
+        }
+        
+        // Draw the snake
+        noFill();
+        
+        // Draw glow layers for head
+        if (headGlow > 0.1) {
+            let glowLayers = 3;
+            for (let i = glowLayers; i > 0; i--) {
+                strokeWeight(100 + i * 20 * headGlow);
+                let alpha = map(i, 0, glowLayers, 20, 80) * headGlow;
+                stroke(255, 100, 100, alpha);
+                beginShape();
+                curveVertex(head.x, head.y);
+                curveVertex(head.x, head.y);
+                curveVertex(segments[1].x, segments[1].y);
+                curveVertex(segments[2].x, segments[2].y);
+                curveVertex(segments[2].x, segments[2].y);
+                endShape();
+            }
+        }
+        
+        // Draw black outline
+        strokeWeight(100);
+        strokeCap(ROUND);
+        stroke(0, 180);
+        
+        beginShape();
+        curveVertex(segments[0].x, segments[0].y);
+        for (let segment of segments) {
+            curveVertex(segment.x, segment.y);
+        }
+        curveVertex(segments[segments.length-1].x, segments[segments.length-1].y);
+        endShape();
+        
+        // Draw colored body with glow influence
+        strokeWeight(28);
+        strokeCap(ROUND);
+        
+        if (mouseIsPressed) {
+            stroke(224, 130, 133);
+        } else {
+            let r, g, b;
+            if (isResting) {
+                r = map(sin(frameCount * 0.02), -1, 1, 160, 200);
+                g = map(sin(frameCount * 0.02), -1, 1, 15, 30);
+                b = map(sin(frameCount * 0.02), -1, 1, 20, 40);
+            } else {
+                r = map(speedMultiplier, 0.1, 3, 180, 255) + headGlow * 50;
+                g = map(speedMultiplier, 0.1, 3, 20, 50);
+                b = map(speedMultiplier, 0.1, 3, 27, 60);
+            }
+            stroke(r, g, b);
+        }
+        
+        beginShape();
+        curveVertex(segments[0].x, segments[0].y);
+        for (let segment of segments) {
+            curveVertex(segment.x, segment.y);
+        }
+        curveVertex(segments[segments.length-1].x, segments[segments.length-1].y);
+        endShape();
+        
+        // Decay glow
+        headGlow *= glowDecay;
+        
+        // Simpler sound generation based on movement
+        if (soundEnabled && frameCount % 3 === 0) {  // Check every 3 frames
+            let speed = dist(segments[0].x, segments[0].y, lastPosition.x, lastPosition.y);
+            
+            if (speed > soundThreshold) {
+                makeUnderwaterSound(speed / 10);
+            } else if (random(1) < 0.05) {  // Occasional ambient sounds
+                makeUnderwaterSound(0.2);
+            }
+        }
+        
+        // Update drone sounds
+        updateDrone();
+        
+        // Only draw UI elements if showUI is true
+        if (showUI) {
+            // Draw recording indicator
+            if (recording) {
+                noStroke();
+                fill(255, 0, 0);
+                ellipse(width - 20, 20, 10, 10);
+                
+                textAlign(RIGHT);
+                textSize(16);
+                fill(255, 0, 0);
+                text('Recording...', width - 40, 25);
+            }
+        }
+        
+        // Add echolocation clicks when exploring
+        if (edgeExploring && soundEnabled) {
+            makeClickSound();
+        }
+        
+        if (!isResting && !edgeExploring && random(1) < 0.01) {
+            selfExploring = true;
+            selfExploreTimer = random(100, 200);
+            // Choose random segment to explore (not too close to head)
+            selfExploreTarget = floor(random(5, segments.length - 1));
+        }
+        
+        if (selfExploring) {
+            let target = segments[selfExploreTarget];
+            targetX = target.x + sin(frameCount * 0.1) * 20;
+            targetY = target.y + cos(frameCount * 0.1) * 20;
+            
+            // Calculate distance to target segment
+            let distToTarget = dist(segments[0].x, segments[0].y, target.x, target.y);
+            
+            // Make squeak sound based on proximity
+            if (distToTarget < 50) {
+                let intensity = map(distToTarget, 50, 10, 0, 1, true);
+                makeSqueakSound(intensity);
+            }
+            
+            selfExploreTimer--;
+            if (selfExploreTimer <= 0) {
+                selfExploring = false;
+            }
+        }
+        
+        // Draw body glow
+        noFill();
+        strokeCap(ROUND);
+        
+        // Draw glow for each segment
+        for (let i = 0; i < segments.length - 1; i++) {
+            if (bodyGlow[i] > 0.1) {
+                let glowLayers = 3;
+                for (let j = glowLayers; j > 0; j--) {
+                    let glowSize = 28 + j * 20 * bodyGlow[i];
+                    let alpha = map(j, 0, glowLayers, 20, 60) * bodyGlow[i];
+                    
+                    // Adjust color based on interaction type
+                    let r = 255;
+                    let g = selfExploring ? map(bodyGlow[i], 0, maxBodyGlow, 100, 180) : 100;
+                    let b = selfExploring ? map(bodyGlow[i], 0, maxBodyGlow, 100, 150) : 100;
+                    
+                    strokeWeight(glowSize);
+                    stroke(r, g, b, alpha);
+                    line(segments[i].x, segments[i].y, segments[i+1].x, segments[i+1].y);
+                }
+            }
+            
+            // Decay glow
+            bodyGlow[i] *= bodyGlowDecay;
+        }
+        
+        // Random chance to fragment
+        if (!fragmenting && !reassembling && random(1) < 0.001) {
+            startFragmentation();
+        }
+        
+        if (fragmenting) {
+            updateFragments();
+            fragmentTimer++;
+            
+            if (fragmentTimer > fragmentDuration) {
+                startReassembly();
+            }
+        }
+        
+        if (reassembling) {
+            updateReassembly();
+        }
+        
+        // Update metabolic cycle
+        metabolicTimer += metabolicRate;
+        
+        // Create new particles
+        if (random(1) < metabolicRate && nutrients.length < maxNutrients) {
+            let segmentIndex = floor(random(segments.length));
+            let segment = segments[segmentIndex];
+            
+            nutrients.push({
+                x: segment.x + random(-10, 10),
+                y: segment.y + random(-10, 10),
+                age: 0,
+                size: random(8, 15),  // Larger size
+                opacity: random(0.8, 1.0),  // Higher opacity
+                color: color(220 + random(-20, 20), 
+                           240 + random(-20, 20), 
+                           255, 
+                           255),  // Brighter color
+                glowSize: random(2, 3)  // Variable glow size
+            });
+        }
+        
+        // Check for nutrient clusters to fold
+        if (!foldingNutrients && nutrients.length > 10 && !isProcessingCluster) {
+            let clusters = findNutrientClusters();
+            if (clusters && clusters.length > 0) {
+                let validCluster = clusters.find(c => 
+                    c && c.nutrients && c.nutrients.length > 5);
+                if (validCluster) {
+                    startFolding(validCluster);
+                }
+            }
+        }
+        
+        if (foldingNutrients) {
+            updateFolding();
+        }
+        
+        // Safe nutrient updates
+        if (nutrients && Array.isArray(nutrients)) {
+            nutrients = nutrients.filter(n => n && typeof n.age === 'number');
+            
+            if (nutrients.length > maxNutrients) {
+                nutrients.length = maxNutrients;
+            }
+        } else {
+            nutrients = [];
+        }
+        
+        // Add this to draw function to update absorption particles
+        if (absorptionParticles.length > 0) {
+            for (let i = absorptionParticles.length - 1; i >= 0; i--) {
+                let p = absorptionParticles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life *= 0.9;
+                
+                // Draw particle
+                noStroke();
+                fill(220, 240, 255, p.life * 255);
+                circle(p.x, p.y, p.life * 8);
+                
+                if (p.life < 0.01) {
+                    absorptionParticles.splice(i, 1);
+                }
+            }
+        }
+        
+        // Update and draw food particles
+        updateFoodParticles();
+        
+        // Update digestion effects
+        updateDigestionEffects();
+        
+        // Add food attraction behavior
+        if (foodParticles.length > 0) {
+            attractToFood();
+        }
+        
+        updateSpawnEffects();
+        
+        // Update ambient sound
+        updateAmbientSound();
+        
+        updateEvolution();
+        
+        // Only process movement if awakening has started
+        if (evolutionState.awakening > 0) {
+            let movementScale = evolutionState.movement;
+            targetX += random(-noiseAmount, noiseAmount) * movementScale;
+            targetY += random(-noiseAmount, noiseAmount) * movementScale;
+        }
+        
+        // Draw time display last so it's always visible
+        drawTimeDisplay();
+        
+        // Update and draw organism
+        drawOrganism();
+        
+    } catch (e) {
+        console.error('Draw error:', e);
+        // Reset critical states
+        foldingNutrients = false;
+        isProcessingCluster = false;
+        nutrients = [];
+    }
 }
 
 function calculateMovementMetrics() {
@@ -1314,53 +1471,49 @@ function keyPressed() {
 
 // Add these helper functions
 function startSound() {
-	if (getAudioContext().state !== 'running') {
-		getAudioContext().resume();
-	}
-	
-	if (!osc.started) {
-		osc.start();
-	}
-	
-	// Louder initial sounds
-	droneOsc1.amp(0.3, 1);    // Higher drone volumes
-	droneOsc2.amp(0.2, 1);
-	
-	osc.freq(200);
-	osc.amp(0.6, 0.1);        // Louder test sound
-	
-	audioStarted = true;
-	// Update sound indicator
-	document.getElementById('sound-dot').style.color = 'green';
-	document.getElementById('sound-text').innerText = 'ON';
-	console.log('Sound started');
-	
-	// Start drone sounds
-	droneOsc1.amp(0.15, 1);
-	droneOsc2.amp(0.1, 1);
-	
-	clickOsc.start();
-	clickOsc.amp(0);
-	
-	squeakOsc.start();
-	squeakOsc.amp(0);
+    if (getAudioContext().state !== 'running') {
+        getAudioContext().resume();
+    }
+    
+    if (!osc.started) {
+        osc.start();
+    }
+    
+    // Start and set volumes for all oscillators
+    droneOsc1.start();
+    droneOsc2.start();
+    droneOsc1.amp(0.3, 1);
+    droneOsc2.amp(0.2, 1);
+    
+    osc.freq(200);
+    osc.amp(0.6, 0.1);
+    
+    audioStarted = true;
+    
+    // Update control panel indicators
+    let soundDot = document.getElementById('sound-dot');
+    let soundText = document.getElementById('sound-text');
+    soundDot.className = 'status-indicator status-on';
+    soundText.textContent = 'ON';
+    
+    console.log('Sound started');
 }
 
 function stopSound() {
-	osc.amp(0, 0.1);
-	audioStarted = false;
-	// Update sound indicator
-	document.getElementById('sound-dot').style.color = 'red';
-	document.getElementById('sound-text').innerText = 'OFF';
-	console.log('Sound stopped');
-	
-	// Stop drone sounds
-	droneOsc1.amp(0, 0.5);
-	droneOsc2.amp(0, 0.5);
-	
-	clickOsc.amp(0);
-	
-	squeakOsc.amp(0);
+    // Fade out all oscillators
+    osc.amp(0, 0.1);
+    droneOsc1.amp(0, 0.5);
+    droneOsc2.amp(0, 0.5);
+    
+    audioStarted = false;
+    
+    // Update control panel indicators
+    let soundDot = document.getElementById('sound-dot');
+    let soundText = document.getElementById('sound-text');
+    soundDot.className = 'status-indicator status-off';
+    soundText.textContent = 'OFF';
+    
+    console.log('Sound stopped');
 }
 
 // Add this function to set up recording
@@ -1469,7 +1622,7 @@ function updateDrone() {
 	
 	droneOsc1.freq(baseFreq + evolutionMod + sin(frameCount * 0.01) * (0.5 + complexityLevel));
 	droneOsc2.freq(baseFreq * (1.5 + complexityLevel * 0.1) + detune + evolutionMod);
-	
+	 
 	// More complex amplitude modulation
 	let droneAmp = map(speed, 0, 10, 0.4, 0.1) * (1 + sin(frameCount * 0.1) * complexityLevel * 0.1);
 	droneOsc1.amp(droneAmp, 0.1);
@@ -2004,39 +2157,58 @@ function checkSelfIntersection() {
 
 // Update updateSound function to include evolution
 function updateSound() {
-	if (!soundEnabled) return;
-	
-	// Evolve sound characteristics
-	let evolvedFreq = baseFrequency * (1 + soundEvolution * 0.5);
-	let evolvedDepth = 0.2 + (soundEvolution * 0.3);
-	
-	harmonics.forEach((osc, i) => {
-		let freqMod = 1 + sin(frameCount * 0.01 + i) * (0.02 + soundEvolution * 0.03);
-		osc.freq(evolvedFreq * harmonicFreqs[i] * freqMod);
-		
-		let ampMod = (1 + sin(frameCount * 0.02 + i * PI/3)) * 0.5;
-		let amp = speedMultiplier * harmonicGains[i] * ampMod * evolvedDepth;
-		osc.amp(amp * 0.2, 0.1);
-	});
-	
-	// Add digestion ambience
-	if (digestionEnergy > 0) {
-		let digestAmp = map(digestionEnergy, 0, 1, 0, 0.1);
-		let digestFreq = map(digestionEnergy, 0, 1, 220, 440);
-		
-		digestSound.freq(digestFreq + sin(frameCount * 0.1) * 20);
-		digestSound.amp(digestAmp);
-		
-		// Gradually lower pitch as digestion happens
-		digestPitch = max(1.0, digestPitch - 0.001);
-	}
-	
-	// Add growth ambience
-	if (organismSize > 1.0) {
-		let growthAmp = map(organismSize, 1, maxOrganismSize, 0, 0.15);
-		growthSound.freq(growthPitch + sin(frameCount * 0.05) * 10);
-		growthSound.amp(growthAmp * (1 + sin(frameCount * 0.02) * 0.2));
-	}
+    if (!audioStarted || segments.length === 0) return;
+    
+    // Calculate spatial position based on organism movement
+    let headX = segments[0].x;
+    let headY = segments[0].y;
+    
+    // Calculate pan position (-1 to 1)
+    let panTarget = map(headX, 0, width, -0.8, 0.8);
+    lastPanPosition = lerp(lastPanPosition, panTarget, panSmoothness);
+    
+    // Update panner
+    mainPanner.pan.rampTo(lastPanPosition, 0.1);
+    
+    // Calculate distance from center for spatial effects
+    let centerX = width / 2;
+    let centerY = height / 2;
+    let distanceFromCenter = dist(headX, headY, centerX, centerY);
+    let maxDistance = dist(0, 0, width/2, height/2);
+    let distanceRatio = distanceFromCenter / maxDistance;
+    
+    // Update reverb based on position
+    mainReverb.wet.rampTo(map(distanceRatio, 0, 1, 0.2, 0.4), 0.1);
+    
+    // Update delay based on movement
+    if (movementAmount > soundThreshold && 
+        millis() - lastSoundTime > minSoundInterval) {
+        
+        // Frequency modulation based on vertical position
+        let freq = map(headY, height, 0, 110, 880);
+        osc.frequency.rampTo(freq, 0.1);
+        
+        // Filter modulation based on horizontal position
+        let filterFreq = map(Math.abs(headX - centerX), 0, width/2, 2000, 500);
+        spatialFilter.frequency.rampTo(filterFreq, 0.1);
+        
+        // Delay feedback based on distance from center
+        spatialDelay.feedback.rampTo(map(distanceRatio, 0, 1, 0.1, 0.3), 0.1);
+        
+        // Update drone sounds with spatial characteristics
+        if (droneOsc1 && droneOsc2) {
+            let baseFreq = map(distanceRatio, 0, 1, 100, 150);
+            droneOsc1.frequency.rampTo(baseFreq * 0.5, 0.2);
+            droneOsc2.frequency.rampTo(baseFreq * 0.75, 0.2);
+            
+            // Adjust volumes based on position and movement
+            let volumeMod = map(distanceRatio, 0, 1, 1, 0.6);
+            droneOsc1.volume.rampTo(-24 * volumeMod, 0.1);
+            droneOsc2.volume.rampTo(-24 * volumeMod, 0.1);
+        }
+        
+        lastSoundTime = millis();
+    }
 }
 
 // Add these new functions
@@ -2460,22 +2632,445 @@ function updateAmbientSound() {
 
 // Add this function to handle evolution
 function updateEvolution() {
-	let currentTime = millis();
-	let progress = (currentTime - evolutionState.startTime) / evolutionState.evolutionDuration;
-	evolutionState.awakening = constrain(progress, 0, 1);
-	
-	// Update movement parameters
-	evolutionState.movement = smoothstep(0, 0.3, evolutionState.awakening);
-	noiseSpeed = baseNoiseSpeed * evolutionState.movement;
-	noiseAmount = baseNoiseAmount * evolutionState.movement;
-	speedMultiplier = map(evolutionState.movement, 0, 1, 0.1, 1);
-	
-	// Update sound parameters
-	evolutionState.sound = smoothstep(0.1, 0.4, evolutionState.awakening);
+    let currentTime = millis();
+    let progress = (currentTime - evolutionState.startTime) / evolutionState.evolutionDuration;
+    evolutionState.awakening = constrain(progress, 0, 1);
+    
+    // Increase activity at night
+    let timeBonus = dayNightCycle.activityLevel * 0.3;  // Up to 30% more active at night
+    
+    // Update movement parameters with time influence
+    evolutionState.movement = (smoothstep(0, 0.3, evolutionState.awakening) + timeBonus) * 
+                             map(dayNightCycle.activityLevel, 0, 1, 0.7, 1.3);
+    noiseSpeed = baseNoiseSpeed * evolutionState.movement;
+    noiseAmount = baseNoiseAmount * evolutionState.movement;
+    speedMultiplier = map(evolutionState.movement, 0, 1, 0.1, 1);
+    
+    // Update sound parameters with time influence
+    evolutionState.sound = (smoothstep(0.1, 0.4, evolutionState.awakening) + timeBonus) * 
+                          map(dayNightCycle.activityLevel, 0, 1, 0.7, 1.3);
 }
 
 // Helper function for smooth transitions
 function smoothstep(edge0, edge1, x) {
 	x = constrain((x - edge0) / (edge1 - edge0), 0, 1);
 	return x * x * (3 - 2 * x);
+}
+
+// Add this function to update background color
+function updateBackground() {
+    // Update time of day
+    if (millis() - dayNightCycle.lastUpdate > dayNightCycle.updateInterval) {
+        updateTimeOfDay();
+        dayNightCycle.lastUpdate = millis();
+    }
+    
+    let currentTime = new Date();
+    let hours = currentTime.getHours();
+    let minutes = currentTime.getMinutes();
+    let timeOfDay = hours + minutes/60; // Time as decimal
+    
+    // Calculate color based on time of day with more transitions
+    let targetColors = { r: 0, g: 0, b: 0 };
+    
+    if (timeOfDay >= 0 && timeOfDay < 4) {
+        // Deep night (midnight to 4am)
+        let t = map(timeOfDay, 0, 4, 0, 1);
+        targetColors = lerpColors(dayNightCycle.colors.deepNight, dayNightCycle.colors.night, t);
+    } else if (timeOfDay >= 4 && timeOfDay < 7) {
+        // Night to dawn transition (4am to 7am)
+        let t = map(timeOfDay, 4, 7, 0, 1);
+        targetColors = lerpColors(dayNightCycle.colors.night, dayNightCycle.colors.dawn, t);
+    } else if (timeOfDay >= 7 && timeOfDay < 12) {
+        // Dawn to day transition (7am to noon)
+        let t = map(timeOfDay, 7, 12, 0, 1);
+        targetColors = lerpColors(dayNightCycle.colors.dawn, dayNightCycle.colors.day, t);
+    } else if (timeOfDay >= 12 && timeOfDay < 17) {
+        // Day to dusk transition (noon to 5pm)
+        let t = map(timeOfDay, 12, 17, 0, 1);
+        targetColors = lerpColors(dayNightCycle.colors.day, dayNightCycle.colors.dusk, t);
+    } else if (timeOfDay >= 17 && timeOfDay < 20) {
+        // Dusk to deep night (5pm to 8pm)
+        let t = map(timeOfDay, 17, 20, 0, 1);
+        targetColors = lerpColors(dayNightCycle.colors.dusk, dayNightCycle.colors.deepNight, t);
+    } else {
+        // Deep night (8pm to midnight)
+        let t = map(timeOfDay, 20, 24, 0, 1);
+        targetColors = lerpColors(dayNightCycle.colors.deepNight, dayNightCycle.colors.night, t);
+    }
+    
+    // Add subtle variation with noise
+    let noiseInfluence = 3;  // Reduced for more consistent colors
+    let evolutionInfluence = evolutionState.awakening * 5;  // Reduced evolution influence
+    
+    // Set target colors with influences
+    bgColor.targetR = targetColors.r + 
+                      (noise(bgColor.noiseOffsetR) - 0.5) * noiseInfluence + 
+                      evolutionInfluence;
+    bgColor.targetG = targetColors.g + 
+                      (noise(bgColor.noiseOffsetG) - 0.5) * noiseInfluence + 
+                      evolutionInfluence * 0.5;
+    bgColor.targetB = targetColors.b + 
+                      (noise(bgColor.noiseOffsetB) - 0.5) * noiseInfluence + 
+                      evolutionInfluence * 0.3;
+    
+    // Smoother color transitions
+    bgColor.lerpSpeed = 0.02;
+    
+    // Smoothly transition current colors
+    bgColor.r = lerp(bgColor.r, bgColor.targetR, bgColor.lerpSpeed);
+    bgColor.g = lerp(bgColor.g, bgColor.targetG, bgColor.lerpSpeed);
+    bgColor.b = lerp(bgColor.b, bgColor.targetB, bgColor.lerpSpeed);
+    
+    // Apply the background color with opacity for atmosphere
+    background(
+        constrain(bgColor.r, 0, 255),
+        constrain(bgColor.g, 0, 255),
+        constrain(bgColor.b, 0, 255),
+        240  // Slight transparency for atmospheric effect
+    );
+}
+
+// Add helper function for color interpolation
+function lerpColors(color1, color2, t) {
+    return {
+        r: lerp(color1.r, color2.r, t),
+        g: lerp(color1.g, color2.g, t),
+        b: lerp(color1.b, color2.b, t)
+    };
+}
+
+// Add this function to update time of day
+function updateTimeOfDay() {
+    let currentTime = new Date();
+    dayNightCycle.hour = currentTime.getHours();
+    let minutes = currentTime.getMinutes();
+    
+    // Calculate time progress through the day (0-1)
+    let timeProgress = (dayNightCycle.hour * 60 + minutes) / 1440;
+    let hourAngle = ((timeProgress * 24 - 2) / 24) * TWO_PI;
+    
+    // More extreme brightness variation
+    dayNightCycle.brightness = map(
+        sin(hourAngle), 
+        -1, 1, 
+        dayNightCycle.minBrightness, 
+        dayNightCycle.maxBrightness
+    );
+    
+    // More pronounced night activity
+    let nightBonus = (dayNightCycle.hour >= 22 || dayNightCycle.hour <= 4) ? 0.3 : 0;
+    dayNightCycle.activityLevel = map(
+        -sin(hourAngle), 
+        -1, 1, 
+        dayNightCycle.minActivity, 
+        dayNightCycle.maxActivity
+    ) + nightBonus;
+}
+
+// Add this function to draw the time
+function drawTimeDisplay() {
+    let currentTime = new Date();
+    let hours = currentTime.getHours();
+    let minutes = currentTime.getMinutes();
+    let ampm = hours >= 12 ? 'PM' : 'AM';
+    
+    // Convert to 12-hour format
+    hours = hours % 12;
+    hours = hours ? hours : 12; // Convert 0 to 12
+    
+    // Format minutes with leading zero
+    minutes = minutes < 10 ? '0' + minutes : minutes;
+    
+    // Format time string
+    let timeString = `${hours}:${minutes} ${ampm}`;
+    
+    // Position in bottom right corner
+    timeDisplay.x = width - timeDisplay.padding;
+    timeDisplay.y = height - timeDisplay.padding;
+    
+    // Draw time
+    push();
+    textAlign(RIGHT, BOTTOM);
+    textSize(timeDisplay.fontSize);
+    fill(200, 220, 255, timeDisplay.opacity);
+    noStroke();
+    text(timeString, timeDisplay.x, timeDisplay.y);
+    pop();
+}
+
+// Update and draw organism
+function drawOrganism() {
+    let colors = getOrganismColor();
+    blendMode(SCREEN);
+    
+    for (let i = 0; i < segments.length; i++) {
+        let segment = segments[i];
+        let segmentGlow = bodyGlow[i] * map(dayNightCycle.activityLevel, 0, 1, 0.5, 1.5);
+        let glowSize = segmentLength * (1 + segmentGlow * 0.3);
+        
+        push();
+        noStroke();
+        
+        // Simple base glow
+        drawingContext.shadowBlur = 20 * segmentGlow;
+        drawingContext.shadowColor = `rgba(${colors.glow.r}, ${colors.glow.g}, ${colors.glow.b}, 0.5)`;
+        
+        // Black body with slight transparency
+        fill(0, 0, 0, 180);
+        circle(segment.x, segment.y, glowSize);
+        
+        // Draw internal rings/squares
+        let ringCount = 3;
+        for (let r = ringCount; r > 0; r--) {
+            let ringSize = glowSize * (1 - r * 0.2);
+            let ringOpacity = map(r, 1, ringCount, 0.5, 0.2) * colors.body.a/255;
+            
+            let ringColor;
+            switch(r % 5) {
+                case 0: ringColor = PALETTE.deepTeal; break;
+                case 1: ringColor = PALETTE.jade; break;
+                case 2: ringColor = PALETTE.sand; break;
+                case 3: ringColor = PALETTE.rust; break;
+                case 4: ringColor = PALETTE.pearl; break;
+            }
+            
+            fill(ringColor.r, ringColor.g, ringColor.b, ringOpacity * 255);
+            
+            // Alternate between squares and circles
+            if (r % 2 === 0) {
+                push();
+                translate(segment.x, segment.y);
+                rotate(frameCount * 0.01 + i * 0.1);
+                rectMode(CENTER);
+                rect(0, 0, ringSize * 0.8, ringSize * 0.8);
+                pop();
+            } else {
+                circle(segment.x, segment.y, ringSize);
+            }
+        }
+        
+        pop();
+    }
+    
+    blendMode(BLEND);
+    drawingContext.shadowBlur = 0;
+}
+
+// Update getOrganismColor function to adjust glow opacity
+function getOrganismColor() {
+    let currentTime = new Date();
+    let hours = currentTime.getHours();
+    let minutes = currentTime.getMinutes();
+    let timeOfDay = hours + minutes/60;
+    
+    let bodyColor, glowColor;
+    
+    if (timeOfDay >= 0 && timeOfDay < 4) {
+        // Deep night (midnight to 4am)
+        bodyColor = organismColors.deepNight.body;
+        glowColor = organismColors.deepNight.glow;
+    } else if (timeOfDay >= 4 && timeOfDay < 7) {
+        // Night to dawn transition
+        let t = map(timeOfDay, 4, 7, 0, 1);
+        bodyColor = lerpColors(organismColors.night.body, organismColors.dawn.body, t);
+        glowColor = lerpColors(organismColors.night.glow, organismColors.dawn.glow, t);
+    } else if (timeOfDay >= 7 && timeOfDay < 12) {
+        // Dawn to day
+        let t = map(timeOfDay, 7, 12, 0, 1);
+        bodyColor = lerpColors(organismColors.dawn.body, organismColors.day.body, t);
+        glowColor = lerpColors(organismColors.dawn.glow, organismColors.day.glow, t);
+    } else if (timeOfDay >= 12 && timeOfDay < 17) {
+        bodyColor = organismColors.day.body;
+        glowColor = organismColors.day.glow;
+    } else if (timeOfDay >= 17 && timeOfDay < 20) {
+        // Day to dusk
+        let t = map(timeOfDay, 17, 20, 0, 1);
+        bodyColor = lerpColors(organismColors.day.body, organismColors.night.body, t);
+        glowColor = lerpColors(organismColors.day.glow, organismColors.night.glow, t);
+    } else {
+        // Night (8pm to midnight)
+        let t = map(timeOfDay, 20, 24, 0, 1);
+        bodyColor = lerpColors(organismColors.night.body, organismColors.deepNight.body, t);
+        glowColor = lerpColors(organismColors.night.glow, organismColors.deepNight.glow, t);
+    }
+    
+    // Adjust for evolution and activity
+    let evolutionBrightness = map(evolutionState.awakening, 0, 1, 0.7, 1.2);
+    let activityBrightness = map(dayNightCycle.activityLevel, 0, 1, 0.8, 1.3);
+    let totalBrightness = evolutionBrightness * activityBrightness;
+    
+    return {
+        body: {
+            r: constrain(bodyColor.r * totalBrightness, 0, 255),
+            g: constrain(bodyColor.g * totalBrightness, 0, 255),
+            b: constrain(bodyColor.b * totalBrightness, 0, 255),
+            a: bodyColor.a * 0.8  // Additional base transparency
+        },
+        glow: {
+            r: glowColor.r,
+            g: glowColor.g,
+            b: glowColor.b,
+            a: map(dayNightCycle.activityLevel, 0, 1, 140, 190)  // Reduced glow opacity range
+        }
+    };
+}
+
+// Update getTrailColor function to ensure different colors
+function getTrailColor() {
+    // Get the current organism color
+    let colors = getOrganismColor();
+    
+    // Create a fixed color mapping that ensures contrast
+    let timeOfDay = new Date().getHours();
+    
+    // Choose trail color based on time of day, ensuring it's different from body
+    let trailColor;
+    if (timeOfDay >= 0 && timeOfDay < 6) {
+        // Night (0-6): Use warm sand for trail when organism is teal/deep rose
+        trailColor = PALETTE.warmSand;
+    } else if (timeOfDay >= 6 && timeOfDay < 12) {
+        // Morning (6-12): Use rose for trail when organism is warm/coral
+        trailColor = PALETTE.rose;
+    } else if (timeOfDay >= 12 && timeOfDay < 18) {
+        // Afternoon (12-18): Use deep rose for trail when organism is teal/coral
+        trailColor = PALETTE.deepRose;
+    } else {
+        // Evening (18-24): Use coral for trail when organism is rose/deep rose
+        trailColor = PALETTE.coral;
+    }
+    
+    // If trail color is too similar to body, use teal as fallback
+    if (Math.abs(colors.body.r - trailColor.r) < 30 &&
+        Math.abs(colors.body.g - trailColor.g) < 30 &&
+        Math.abs(colors.body.b - trailColor.b) < 30) {
+        trailColor = PALETTE.teal;
+    }
+    
+    return trailColor;
+}
+
+// Update drawTrail function to make trails more visible
+function drawTrail() {
+    if (trail.length < 2) return;
+    
+    blendMode(SCREEN);
+    noFill();
+    
+    for (let i = 0; i < trail.length - 1; i++) {
+        let trailColor = getTrailColor();
+        let opacity = trailOpacity[i] * 255;
+        
+        // Draw main trail with stronger opacity
+        stroke(
+            trailColor.r,
+            trailColor.g,
+            trailColor.b,
+            opacity * 0.6  // Increased from 0.4
+        );
+        
+        let sw = trailWidth * (1 - i/trail.length) * trailOpacity[i];
+        strokeWeight(sw);
+        
+        // Draw trail segment
+        line(
+            trail[i].x,
+            trail[i].y,
+            trail[i + 1].x,
+            trail[i + 1].y
+        );
+        
+        // Add stronger glow effect
+        stroke(
+            trailColor.r,
+            trailColor.g,
+            trailColor.b,
+            opacity * 0.3  // Increased from 0.2
+        );
+        strokeWeight(sw * 1.8);  // Increased from 1.5
+        line(
+            trail[i].x,
+            trail[i].y,
+            trail[i + 1].x,
+            trail[i + 1].y
+        );
+    }
+    
+    blendMode(BLEND);
+}
+
+// Update updateTrail function to include color transitions
+function updateTrail() {
+    // Add current position to trail
+    if (segments.length > 0) {
+        trail.push(createVector(segments[0].x, segments[0].y));
+        trailOpacity.push(1.0);
+    }
+    
+    // Remove old trail points
+    while (trail.length > trailLength) {
+        trail.shift();
+        trailOpacity.shift();
+    }
+    
+    // Update trail opacity
+    for (let i = 0; i < trailOpacity.length; i++) {
+        trailOpacity[i] *= trailDecay;
+    }
+}
+
+// Add these variables for hints
+let hints = {
+    x: 20,
+    y: 20,
+    padding: 15,
+    opacity: 180,
+    fadeTime: 3000, // Time in ms before hints start to fade
+    showDuration: 5000 // Total time to show hints
+};
+
+// Add this to draw function
+function drawHints() {
+    let timeSinceStart = millis();
+    let opacity = hints.opacity;
+    
+    // Fade out after fadeTime
+    if (timeSinceStart > hints.fadeTime) {
+        opacity = map(timeSinceStart, 
+                     hints.fadeTime, 
+                     hints.showDuration, 
+                     hints.opacity, 
+                     0);
+    }
+    
+    // Stop drawing after showDuration
+    if (timeSinceStart > hints.showDuration) return;
+    
+    push();
+    fill(255, 255, 255, opacity);
+    noStroke();
+    textAlign(LEFT, TOP);
+    textSize(14);
+    
+    let y = hints.y;
+    text('Controls:', hints.x, y);
+    y += hints.padding;
+    text('SPACE: Toggle sound', hints.x, y);
+    y += hints.padding;
+    text('R: Start recording', hints.x, y);
+    y += hints.padding;
+    text('S: Stop recording', hints.x, y);
+    y += hints.padding;
+    text('Mouse: Influence field', hints.x, y);
+    
+    // Draw sound status
+    y += hints.padding * 1.5;
+    text('Sound: ' + (soundEnabled ? 'ON' : 'OFF'), hints.x, y);
+    
+    // Draw recording indicator if active
+    if (videoRecorder && videoRecorder.isRecording) {
+        fill(255, 0, 0, opacity);
+        circle(hints.x + 100, y + 5, 8);
+    }
+    pop();
 }

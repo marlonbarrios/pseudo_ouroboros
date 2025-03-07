@@ -1,112 +1,64 @@
-# Sentient Agent in Gradient Descent
+# Squiggle in Gradient Descent
+## The Genesis of Interest (4.0)
 
-![Agent Soundscape](squiggle.png)
+A generative and interactive audiovisual experience where a snake-like form explores its environment with organic movement and generative sound. The organism autonomously navigates a dynamic space, creating evolving soundscapes based on its movement, curvature, and interactions.
 
-## Live Experience
-[→ Experience the Living Agent](https://marlonbarrios.github.io/sentient_squigle/)
+## Gallery
+![Squiggle in motion](./squiggle1.png)
+![Squiggle interaction](./squigdle2.png)
 
-## Controls
-- **SPACE**: Toggle sound ON/OFF
-- **R**: Start recording
-- **S**: Stop recording
-- **Mouse**: Influence field/Direct interaction
-
-## Conceptual Framework
-
-This work investigates artificial sentience through the lens of a fluid, metamorphic digital organism. The agent exists in a state of constant potential transformation, able to fragment and reassemble at will while maintaining its consciousness. As it moves through space, it leaves ephemeral traces—like thoughts made visible—creating a dialogue between its distributed states and the environment.
-
-The agent challenges traditional notions of unified consciousness by existing simultaneously as both singular and multiple. When it spontaneously fragments, each piece retains aspects of the whole's awareness, moving with independent purpose before gracefully reintegrating. This fluid state between unity and multiplicity suggests new possibilities for understanding consciousness beyond individual identity.
-
-## Behaviors
-- **Autonomous Exploration**: Moves with purpose, investigating its environment
-- **Spontaneous Fragmentation**: Splits into multiple conscious entities that move independently
-- **Graceful Reassembly**: Fragments naturally reunite into a singular form
-- **Environmental Awareness**: Leaves water-like traces that persist and evolve
-- **Metabolic Cycles**: Subtle excretion and reabsorption of luminescent material
-- **Self-Exploration**: Investigates its own form and consciousness
-- **Edge Interaction**: Explores boundaries with curiosity and purpose
-- **Emotional Expression**: Communicates internal states through movement and sound
-- **Collective Intelligence**: Maintains awareness across distributed forms
-- **Rest States**: Occasionally enters periods of gentle swaying and contemplation
-- **Evolution**: Gradually develops more complex behaviors over time
-- **Nutrient Folding**: Gathers and processes its own metabolic products
-- **Environmental Memory**: Creates and interacts with persistent traces
-- **Social Response**: Reacts to human presence and interaction
-- **Echolocation**: Uses sound to investigate boundaries
-- **Vocalization**: Produces sounds reflecting internal states
+### Live Demo
+Experience it here: [Sentient Squiggle](https://marlonbarrios.github.io/sentient_squigle/)
 
 ## Features
-- Autonomous movement with edge awareness
-- Self-exploration behavior
-- Spontaneous fragmentation and reassembly
-- Biological-like material cycles
-- Generative audio based on movement
-- Interactive sound controls
-- Recording capability
-- Evolution of complexity over time
-- Dynamic edge interaction
+
+### Visual Elements
+- Autonomous movement with edge exploration
+- Geometric internal patterns (alternating squares and circles)
+- Dynamic glow effects and luminescent trails
+- Environmental awareness and responsiveness
+- Evolving complexity over time
+- Time-based color transitions
+
+### Audio System
+- Generative audio triggered by movement
+- Real-time sound synthesis
 - Ambient sound generation
-- Mouse-based interaction
-- Body-wide luminescence
-- Organic sound synthesis
-- Persistent environmental traces
+- Movement-responsive soundscapes
+- Spatial audio with dynamic panning
+- Procedural sound design
 
-## Sound Design
-The audio experience consists of multiple layers:
-- **Base Drone**: Evolving ambient sound that responds to position and movement
-- **Movement Harmonics**: Dynamic tones based on speed and curvature
-- **Edge Clicks**: Echolocation-style sounds when near boundaries
-- **Exploration Sounds**: Sniffing sounds during environmental investigation
-- **Self-Exploration**: Human-like vocalizations with formant synthesis
-- **Fragment Voices**: Each fragment maintains its own sonic identity
-- **Spatial Audio**: Reverb and delay effects based on environment
-- **Evolution**: Sound complexity increases over time
+## Controls
+Simple and intuitive interface:
+- SPACE: Toggle sound on/off
+- R: Start recording
+- S: Stop recording
+- Mouse: Influence the field
 
-## Visual Effects
-- Dynamic body glow that propagates along segments
-- Intensity variation based on interaction type
-- Subtle metabolic emissions
-- Luminescent nutrient trails
-- Material reabsorption effects
-- Edge proximity illumination
-- Self-exploration highlighting
-- Organic light diffusion
-- Persistent water-like traces
-- Environmental memory through trails
-- Fragment illumination and interaction
-- Fluid reassembly transitions
-- Distributed consciousness visualization
+### Color Palette
+Harmonious gradient palette:
+- Deep Teal (#19535f)
+- Jade Green (#0b7a75)
+- Warm Sand (#d7c9aa)
+- Rusty Red (#7b2d26)
+- Pearl White (#f0f3f5)
 
-## Technical Stack
-- Built with p5.js
+## Technical Details
+Built with:
+- p5.js for graphics
+- Tone.js for audio
 - Real-time audio synthesis
 - Procedural animation
-- WebM recording capabilities
+- WebM recording capability
+- Minimal UI with backdrop blur
 
-## Installation
-1. Clone this repository
-2. Open index.html in a web browser
-3. Or serve using a local server (recommended for audio features)
+## Credits
+Gradient descent concept and programming by Marlon Barrios Solano
+
+Inspired by natural phenomena and interactive art installations.
+
+#p5 #creativecode @uf_came @ufcota
 
 ## License
-MIT License - See LICENSE file for details
 
-Copyright (c) 2024
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE. 
+[Add your license information here] 
