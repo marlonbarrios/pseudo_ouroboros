@@ -1,6 +1,6 @@
 # Sentient Squiggle
 
-An interactive digital organism that evolves and responds to its environment. The organism grows through self-intersection and exhibits complex behaviors based on time of day.
+An interactive digital organism that evolves and responds to its environment. The organism grows through self-intersection and exhibits complex behaviors based on time of day (local time).
 
 ## Features
 

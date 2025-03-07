@@ -1289,14 +1289,11 @@ function draw() {
             targetY += random(-noiseAmount, noiseAmount) * movementScale;
         }
         
-        // Draw time display last so it's always visible
-        drawTimeDisplay();
-        
         // Update and draw organism
         drawOrganism();
         
         updateTimeBasedBehavior();
-        updateTimeDisplay();
+        updateTimeDisplay();  // Keep this to update control panel time
         updateGrowth();
         
     } catch (e) {
@@ -3118,11 +3115,10 @@ function updateTimeDisplay() {
     
     if (timeDisplay && stateDisplay) {
         let now = new Date();
-        let hours = now.getHours();
+        let hours = now.getHours().toString().padStart(2, '0');
         let minutes = now.getMinutes().toString().padStart(2, '0');
         let seconds = now.getSeconds().toString().padStart(2, '0');
         
-        // Update time display
         timeDisplay.textContent = `${hours}:${minutes}:${seconds}`;
         
         // Update state based on time
@@ -3139,7 +3135,6 @@ function updateTimeDisplay() {
             state = timeStates.NIGHT;
         }
         
-        // Update state display
         stateDisplay.textContent = state;
     }
 }
