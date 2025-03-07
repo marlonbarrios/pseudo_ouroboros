@@ -1295,6 +1295,8 @@ function draw() {
         // Update and draw organism
         drawOrganism();
         
+        updateTimeBasedBehavior();  // Add this line near the start
+        
     } catch (e) {
         console.error('Draw error:', e);
         // Reset critical states
@@ -2859,59 +2861,38 @@ function drawOrganism() {
 
 // Update getOrganismColor function to adjust glow opacity
 function getOrganismColor() {
-    let currentTime = new Date();
-    let hours = currentTime.getHours();
-    let minutes = currentTime.getMinutes();
-    let timeOfDay = hours + minutes/60;
+    realTimeOfDay.update();
+    let hour = realTimeOfDay.hour;
     
     let bodyColor, glowColor;
     
-    if (timeOfDay >= 0 && timeOfDay < 4) {
-        // Deep night (midnight to 4am)
-        bodyColor = organismColors.deepNight.body;
-        glowColor = organismColors.deepNight.glow;
-    } else if (timeOfDay >= 4 && timeOfDay < 7) {
-        // Night to dawn transition
-        let t = map(timeOfDay, 4, 7, 0, 1);
-        bodyColor = lerpColors(organismColors.night.body, organismColors.dawn.body, t);
-        glowColor = lerpColors(organismColors.night.glow, organismColors.dawn.glow, t);
-    } else if (timeOfDay >= 7 && timeOfDay < 12) {
-        // Dawn to day
-        let t = map(timeOfDay, 7, 12, 0, 1);
-        bodyColor = lerpColors(organismColors.dawn.body, organismColors.day.body, t);
-        glowColor = lerpColors(organismColors.dawn.glow, organismColors.day.glow, t);
-    } else if (timeOfDay >= 12 && timeOfDay < 17) {
-        bodyColor = organismColors.day.body;
-        glowColor = organismColors.day.glow;
-    } else if (timeOfDay >= 17 && timeOfDay < 20) {
-        // Day to dusk
-        let t = map(timeOfDay, 17, 20, 0, 1);
-        bodyColor = lerpColors(organismColors.day.body, organismColors.night.body, t);
-        glowColor = lerpColors(organismColors.day.glow, organismColors.night.glow, t);
+    if (hour >= 0 && hour < 6) {
+        // Deep night (midnight to 6am)
+        bodyColor = { r: 25, g: 83, b: 95, a: 255 };  // Deep teal
+        glowColor = { r: 11, g: 122, b: 117, a: 255 };  // Jade
+    } else if (hour >= 6 && hour < 9) {
+        // Dawn (6am to 9am)
+        bodyColor = { r: 215, g: 201, b: 170, a: 255 };  // Sand
+        glowColor = { r: 123, g: 45, b: 38, a: 255 };  // Rust
+    } else if (hour >= 9 && hour < 17) {
+        // Day (9am to 5pm)
+        bodyColor = { r: 240, g: 243, b: 245, a: 255 };  // Pearl
+        glowColor = { r: 11, g: 122, b: 117, a: 255 };  // Jade
+    } else if (hour >= 17 && hour < 20) {
+        // Dusk (5pm to 8pm)
+        bodyColor = { r: 123, g: 45, b: 38, a: 255 };  // Rust
+        glowColor = { r: 215, g: 201, b: 170, a: 255 };  // Sand
     } else {
         // Night (8pm to midnight)
-        let t = map(timeOfDay, 20, 24, 0, 1);
-        bodyColor = lerpColors(organismColors.night.body, organismColors.deepNight.body, t);
-        glowColor = lerpColors(organismColors.night.glow, organismColors.deepNight.glow, t);
+        bodyColor = { r: 25, g: 83, b: 95, a: 255 };  // Deep teal
+        glowColor = { r: 240, g: 243, b: 245, a: 255 };  // Pearl
     }
     
-    // Adjust for evolution and activity
-    let evolutionBrightness = map(evolutionState.awakening, 0, 1, 0.7, 1.2);
-    let activityBrightness = map(dayNightCycle.activityLevel, 0, 1, 0.8, 1.3);
-    let totalBrightness = evolutionBrightness * activityBrightness;
-    
     return {
-        body: {
-            r: constrain(bodyColor.r * totalBrightness, 0, 255),
-            g: constrain(bodyColor.g * totalBrightness, 0, 255),
-            b: constrain(bodyColor.b * totalBrightness, 0, 255),
-            a: bodyColor.a * 0.8  // Additional base transparency
-        },
+        body: bodyColor,
         glow: {
-            r: glowColor.r,
-            g: glowColor.g,
-            b: glowColor.b,
-            a: map(dayNightCycle.activityLevel, 0, 1, 140, 190)  // Reduced glow opacity range
+            ...glowColor,
+            a: realTimeOfDay.isNight ? 140 : 190  // Dimmer at night
         }
     };
 }
@@ -3073,4 +3054,48 @@ function drawHints() {
         circle(hints.x + 100, y + 5, 8);
     }
     pop();
+}
+
+// Add these variables at the top
+let realTimeOfDay = {
+    hour: 0,
+    isNight: false,
+    isDawn: false,
+    isDay: false,
+    isDusk: false,
+    update: function() {
+        this.hour = new Date().getHours();
+        this.isNight = (this.hour >= 0 && this.hour < 6) || (this.hour >= 20);
+        this.isDawn = this.hour >= 6 && this.hour < 9;
+        this.isDay = this.hour >= 9 && this.hour < 17;
+        this.isDusk = this.hour >= 17 && this.hour < 20;
+    }
+};
+
+// Add this function to update behavior based on time
+function updateTimeBasedBehavior() {
+    realTimeOfDay.update();
+    
+    // Adjust noise and movement parameters based on time
+    if (realTimeOfDay.isNight) {
+        // Night: slower, more meandering movement
+        noiseSpeed = baseNoiseSpeed * 0.7;
+        noiseAmount = baseNoiseAmount * 1.3;
+        segmentLength = baseSegmentLength * 1.1;
+    } else if (realTimeOfDay.isDawn) {
+        // Dawn: gradual awakening
+        noiseSpeed = baseNoiseSpeed * 0.9;
+        noiseAmount = baseNoiseAmount * 1.1;
+        segmentLength = baseSegmentLength;
+    } else if (realTimeOfDay.isDay) {
+        // Day: most active
+        noiseSpeed = baseNoiseSpeed * 1.2;
+        noiseAmount = baseNoiseAmount * 0.8;
+        segmentLength = baseSegmentLength * 0.9;
+    } else if (realTimeOfDay.isDusk) {
+        // Dusk: starting to slow down
+        noiseSpeed = baseNoiseSpeed;
+        noiseAmount = baseNoiseAmount;
+        segmentLength = baseSegmentLength * 1.05;
+    }
 }
