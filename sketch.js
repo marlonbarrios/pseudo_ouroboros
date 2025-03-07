@@ -2,7 +2,7 @@
 // http://processing.org/learning/topics/follow3.html
 
 // The amount of points in the path
-let points = 25;
+let points = 40;  // Increased from 25 to 40 segments
 
 // The distance between the points (will be adjusted based on canvas size)
 let baseSegmentLength = 45;
@@ -1295,7 +1295,9 @@ function draw() {
         // Update and draw organism
         drawOrganism();
         
-        updateTimeBasedBehavior();  // Add this line near the start
+        updateTimeBasedBehavior();
+        updateTimeDisplay();
+        updateGrowth();
         
     } catch (e) {
         console.error('Draw error:', e);
@@ -2818,15 +2820,16 @@ function drawOrganism() {
         drawingContext.shadowBlur = 20 * segmentGlow;
         drawingContext.shadowColor = `rgba(${colors.glow.r}, ${colors.glow.g}, ${colors.glow.b}, 0.5)`;
         
-        // Black body with slight transparency
-        fill(0, 0, 0, 180);
+        // Make the dark body much more transparent (80% transparent)
+        fill(0, 0, 0, 51);  // Changed from 128 to 51 (only 20% opacity)
         circle(segment.x, segment.y, glowSize);
         
-        // Draw internal rings/squares
+        // Draw internal rings/squares with increased visibility
         let ringCount = 3;
         for (let r = ringCount; r > 0; r--) {
             let ringSize = glowSize * (1 - r * 0.2);
-            let ringOpacity = map(r, 1, ringCount, 0.5, 0.2) * colors.body.a/255;
+            // Increase ring opacity to be more prominent through very transparent body
+            let ringOpacity = map(r, 1, ringCount, 0.8, 0.4) * colors.body.a/255;
             
             let ringColor;
             switch(r % 5) {
@@ -3098,4 +3101,171 @@ function updateTimeBasedBehavior() {
         noiseAmount = baseNoiseAmount;
         segmentLength = baseSegmentLength * 1.05;
     }
+}
+
+// Add these variables for time and state display
+let timeStates = {
+    NIGHT: 'Night 🌙',
+    DAWN: 'Dawn 🌅',
+    DAY: 'Day ☀️',
+    DUSK: 'Dusk 🌆'
+};
+
+// Update the time display function to include state
+function updateTimeDisplay() {
+    let timeDisplay = document.getElementById('time-display');
+    let stateDisplay = document.getElementById('time-state');
+    
+    if (timeDisplay && stateDisplay) {
+        let now = new Date();
+        let hours = now.getHours();
+        let minutes = now.getMinutes().toString().padStart(2, '0');
+        let seconds = now.getSeconds().toString().padStart(2, '0');
+        
+        // Update time display
+        timeDisplay.textContent = `${hours}:${minutes}:${seconds}`;
+        
+        // Update state based on time
+        let state = '';
+        if (hours >= 0 && hours < 6) {
+            state = timeStates.NIGHT;
+        } else if (hours >= 6 && hours < 9) {
+            state = timeStates.DAWN;
+        } else if (hours >= 9 && hours < 17) {
+            state = timeStates.DAY;
+        } else if (hours >= 17 && hours < 20) {
+            state = timeStates.DUSK;
+        } else {
+            state = timeStates.NIGHT;
+        }
+        
+        // Update state display
+        stateDisplay.textContent = state;
+    }
+}
+
+// Add this variable at the top
+let newSegmentWiggle = 0;
+let wiggleDuration = 60;  // Number of frames to wiggle
+let wiggleAmount = 15;    // How much to wiggle
+
+// Add this variable to track intersection state
+let isIntersecting = false;
+let maxSegments = 100;  // Maximum number of segments allowed
+let lastIntersectionTime = 0;  // Add this to track timing
+let intersectionCooldown = 500;  // Add 500ms cooldown between intersections
+
+// Add these variables at the top
+let newSegmentColor = { r: 0, g: 0, b: 0 };
+let isInspectingNew = false;
+let inspectionTimer = 0;
+let inspectionDuration = 180; // How long to inspect
+let inspectionTarget = null;
+let lastNewSegmentIndex = -1;
+
+function updateGrowth() {
+    let currentlyIntersecting = checkSelfIntersection();
+    let currentTime = millis();
+    
+    // Only grow when we first detect an intersection and cooldown has passed
+    if (currentlyIntersecting && !isIntersecting && 
+        currentTime - lastIntersectionTime > intersectionCooldown) {
+        
+        if (points < maxSegments) {
+            points++;
+            
+            // Add a new segment with distinct properties
+            let lastSegment = segments[segments.length - 1];
+            if (lastSegment) {
+                segments.push(createVector(lastSegment.x, lastSegment.y));
+                // Give new segment a distinct color
+                newSegmentColor = {
+                    r: random(180, 255),
+                    g: random(180, 255),
+                    b: random(180, 255)
+                };
+                bodyGlow.push(2); // Brighter glow for new segment
+                newSegmentWiggle = wiggleDuration;
+                
+                // Start inspection behavior
+                isInspectingNew = true;
+                inspectionTimer = inspectionDuration;
+                lastNewSegmentIndex = segments.length - 1;
+                inspectionTarget = segments[lastNewSegmentIndex];
+                
+                // Update counter
+                let segmentDisplay = document.getElementById('segment-count');
+                if (segmentDisplay) {
+                    segmentDisplay.textContent = `${points}/${maxSegments}`;
+                }
+                
+                lastIntersectionTime = currentTime;
+            }
+        }
+    }
+    
+    // Update inspection behavior
+    if (isInspectingNew && inspectionTimer > 0) {
+        // Make head move towards new segment
+        let head = segments[0];
+        let newSegment = segments[lastNewSegmentIndex];
+        if (head && newSegment) {
+            // Calculate direction to new segment
+            let dx = newSegment.x - head.x;
+            let dy = newSegment.y - head.y;
+            let dist = sqrt(dx * dx + dy * dy);
+            
+            // Move head towards new segment if not too close
+            if (dist > segmentLength * 2) {
+                targetX = newSegment.x + random(-30, 30);
+                targetY = newSegment.y + random(-30, 30);
+            }
+            
+            // Add sniffing movement
+            if (dist < segmentLength * 4) {
+                head.x += random(-5, 5);
+                head.y += random(-5, 5);
+            }
+        }
+        
+        inspectionTimer--;
+        if (inspectionTimer <= 0) {
+            isInspectingNew = false;
+        }
+    }
+    
+    // Draw new segment differently
+    if (lastNewSegmentIndex >= 0 && lastNewSegmentIndex < segments.length) {
+        let newSegment = segments[lastNewSegmentIndex];
+        push();
+        fill(newSegmentColor.r, newSegmentColor.g, newSegmentColor.b, 200);
+        noStroke();
+        circle(newSegment.x, newSegment.y, segmentLength * 1.2);
+        pop();
+    }
+    
+    isIntersecting = currentlyIntersecting;
+}
+
+// Make sure segment display is updated
+function updateSegmentDisplay() {
+    let segmentDisplay = document.getElementById('segment-count');
+    if (segmentDisplay) {
+        segmentDisplay.textContent = `${points}/${maxSegments}`;  // Show current/max segments
+    }
+}
+
+// Add this function to check for self-intersection
+function checkSelfIntersection() {
+    // Need to check at least 4 segments apart to avoid false positives
+    for (let i = 0; i < segments.length - 4; i++) {
+        for (let j = i + 4; j < segments.length; j++) {
+            let d = dist(segments[i].x, segments[i].y, segments[j].x, segments[j].y);
+            // If segments are very close, consider it an intersection
+            if (d < segmentLength * 0.5) {
+                return true;
+            }
+        }
+    }
+    return false;
 }

@@ -113,6 +113,30 @@
 			margin-right: 8px;
 			font-weight: 500;
 		}
+		.sound-info {
+			flex-direction: column;
+			align-items: flex-start !important;
+		}
+		.sound-details {
+			margin-top: 4px;
+			font-size: 12px;
+			opacity: 0.8;
+		}
+		.sound-params {
+			display: flex;
+			gap: 8px;
+			margin-top: 2px;
+		}
+		.time-info {
+			display: flex;
+			flex-direction: column;
+			align-items: flex-end;
+		}
+		.state-text {
+			font-size: 12px;
+			opacity: 0.8;
+			margin-top: 2px;
+		}
 	</style>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.min.js"></script>
@@ -131,11 +155,33 @@
 			</span>
 		</div>
 		<div class="control-item">
-			<span>⏺️ Recording (R/S)</span>
-			<span class="status-indicator recording-indicator" id="record-dot"></span>
+			<span>🕐 Time</span>
+			<div class="time-info">
+				<span id="time-display">00:00:00</span>
+				<span id="time-state" class="state-text">Day ☀️</span>
+			</div>
 		</div>
 		<div class="control-item">
+			<span>🔄 Segments</span>
+			<span id="segment-count">40/100</span>
+		</div>
+		<div class="control-item sound-info">
+			<span>🎵 Sound Profile</span>
+			<div class="sound-details">
+				<span id="tone-text">Dawn (220Hz)</span>
+				<div class="sound-params">
+					<span>Filter: <span id="filter-freq">1200Hz</span></span>
+					<span>Reverb: <span id="reverb-amount">50%</span></span>
+				</div>
+			</div>
+		</div>
+	
+		<div class="control-item">
 			<span>🖱️ Mouse: Influence field</span>
+		</div>
+		<div class="control-item">
+			<span>⏺️ Recording (R/S)</span>
+			<span class="status-indicator recording-indicator" id="record-dot"></span>
 		</div>
 	</div>
 	<script src="sketch.js"></script>
