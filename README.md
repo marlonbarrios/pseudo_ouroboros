@@ -1,17 +1,16 @@
+Created by **Marlon Barrios Solano**
 
-# Pheudo Ouroboros: The Genesis of Self Interest in Gradient Descent
+# Pseudo Ouroboros: The Genesis of Self Interest in Gradient Descent
 
 <img width="1479" alt="Screenshot 2025-03-09 at 4 31 52 PM" src="https://github.com/user-attachments/assets/72cc6de8-a554-4349-b71e-1b7c63be07a5" />
 
-**Pheudo Ouroboros** is an experimental interactive generative art project that fuses intricate visual patterns with dynamic audio synthesis. Inspired by self-organizing systems and the iterative nature of gradient descent, this project simulates a snake-like organism that continuously evolves—mimicking the ancient symbol of eternal cyclic renewal, the Ouroboros.
+**Pseudo Ouroboros** is an experimental interactive generative art project that fuses intricate visual patterns with dynamic audio synthesis. Inspired by self-organizing systems and the iterative nature of gradient descent, this project simulates a snake-like organism that continuously evolves—mimicking the ancient symbol of eternal cyclic renewal, the Ouroboros.
 
 ---
 
 ## Overview
 
-Created by **Marlon Barrios Solano**
- 
-Pheudo Ouroboros explores the intersection of art, sound, and algorithmic evolution. The project features an autonomous, snake-like entity whose movement and aesthetics are influenced by:
+Pseudo Ouroboros explores the intersection of art, sound, and algorithmic evolution. The project features an autonomous, snake-like entity whose movement and aesthetics are influenced by:
 
 - **Organic Movement:**  
   The creature’s path is generated using Perlin noise and autonomous algorithms, resulting in smooth, natural curves with behaviors like resting, edge exploration, and self-driven direction changes.
@@ -30,7 +29,14 @@ Pheudo Ouroboros explores the intersection of art, sound, and algorithmic evolut
 
 <img width="1479" alt="Screenshot 2025-03-09 at 4 31 44 PM" src="https://github.com/user-attachments/assets/be29c878-9554-445a-8f7d-6a2c1dba5137" />
 
---
+---
+
+## Watch the Video
+
+Check out the project video on YouTube:  
+[https://youtu.be/58GtF1Lki5Y](https://youtu.be/58GtF1Lki5Y)
+
+---
 
 ## Live Demo
 
@@ -41,25 +47,16 @@ Experience the project live at:
 
 ---
 
-
-
-## Watch the Video
-
-Check out the project video on YouTube:  
-[https://youtu.be/58GtF1Lki5Y](https://youtu.be/58GtF1Lki5Y)
-
--
-
 ## Installation
 
 1. **Clone the Repository:**
 
    ```bash
-   git clone https://github.com/yourusername/pheudo-ouroboros.git
+   git clone https://github.com/yourusername/pseudo-ouroboros.git
 
 	2.	Navigate to the Project Folder:
 
-cd pheudo-ouroboros
+cd pseudo-ouroboros
 
 
 	3.	Dependencies:
@@ -100,7 +97,7 @@ For more projects and updates, visit: https://marlonbarrios.github.io/pseudo_our
 
 Contributing
 
-Contributions to enhance and extend Pheudo Ouroboros are welcome!
+Contributions to enhance and extend Pseudo Ouroboros are welcome!
 	1.	Fork the repository.
 	2.	Create your feature branch: git checkout -b feature/YourFeature.
 	3.	Commit your changes: git commit -m 'Add some feature'.
@@ -115,5 +112,5 @@ This project is open-source and available under the MIT License.
 
 Disclaimer
 
-Pheudo Ouroboros is an experimental work of generative art. Its behavior arises from a blend of deterministic algorithms, noise functions, and user interactions. Enjoy the unpredictable evolution and the journey through self-interest in gradient descent!
+Pseudo Ouroboros is an experimental work of generative art. Its behavior arises from a blend of deterministic algorithms, noise functions, and user interactions. Enjoy the unpredictable evolution and the journey through self-interest in gradient descent!
 
