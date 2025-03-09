@@ -2,7 +2,7 @@
 // http://processing.org/learning/topics/follow3.html
 
 // The amount of points in the path
-let points = 40;  // Increased from 25 to 40 segments
+let points = 40;  // Fixed number of segments
 
 // The distance between the points (will be adjusted based on canvas size)
 let baseSegmentLength = 45;
@@ -353,23 +353,47 @@ let spatialFilter;
 let lastPanPosition = 0;
 let panSmoothness = 0.1;
 
-// Update setupAudio function with spatial enhancements
+// Add safety limits for audio parameters
+let MAX_FEEDBACK = 0.7;  // Maximum feedback allowed
+let MIN_FILTER_FREQ = 20;  // Minimum filter frequency
+let MAX_FILTER_FREQ = 20000;  // Maximum filter frequency
+let MAX_REVERB_TIME = 5;  // Maximum reverb time in seconds
+let MAX_DELAY_TIME = 1;  // Maximum delay time in seconds
+let MAX_VOLUME = 0.8;  // Maximum volume multiplier
+
+// Add these variables at the top for intersection effects
+let intersectionEffects = [];
+let maxIntersectionEffects = 20;
+let intersectionGlow = 0;
+let intersectionSound;
+let lastIntersectionSound = 0;
+let minIntersectionSoundInterval = 300; // Minimum time between sounds
+
+// Add these variables at the top for Ouroboros effect
+let isOuroboros = false;
+let ouroborosTimer = 0;
+let ouroborosEffects = [];
+let ouroborosSound;
+let lastOuroborosSound = 0;
+let ouroborosDuration = 180; // Duration of the effect in frames
+
+// Update setupAudio function to include safety limits
 function setupAudio() {
-    // Create spatial audio effects
+    // Create spatial audio effects with safety limits
     mainReverb = new Tone.Reverb({
-        decay: 4.0,
-        wet: 0.3,
-        preDelay: 0.2
+        decay: Math.min(4.0, MAX_REVERB_TIME),
+        wet: Math.min(0.3, MAX_FEEDBACK),
+        preDelay: Math.min(0.2, MAX_DELAY_TIME)
     }).toDestination();
     
     spatialDelay = new Tone.PingPongDelay({
-        delayTime: 0.3,
-        feedback: 0.2,
-        wet: 0.15
+        delayTime: Math.min(0.3, MAX_DELAY_TIME),
+        feedback: Math.min(0.2, MAX_FEEDBACK),
+        wet: Math.min(0.15, MAX_FEEDBACK)
     }).connect(mainReverb);
     
     spatialFilter = new Tone.Filter({
-        frequency: 2000,
+        frequency: constrain(2000, MIN_FILTER_FREQ, MAX_FILTER_FREQ),
         type: "lowpass",
         rolloff: -24
     }).connect(spatialDelay);
@@ -377,25 +401,51 @@ function setupAudio() {
     // Create main panner
     mainPanner = new Tone.Panner(0).connect(spatialFilter);
     
-    // Setup oscillator with spatial routing
+    // Setup oscillator with spatial routing and volume safety
     osc = new Tone.Oscillator({
         frequency: 440,
         type: "sine",
-        volume: -12
+        volume: -12 * MAX_VOLUME
     }).connect(mainPanner).start();
     
-    // Setup drone sounds with spatial routing
+    // Setup drone sounds with spatial routing and volume safety
     droneOsc1 = new Tone.Oscillator({
         frequency: 100,
         type: "sine",
-        volume: -24
+        volume: -24 * MAX_VOLUME
     }).connect(mainPanner).start();
     
     droneOsc2 = new Tone.Oscillator({
         frequency: 150,
         type: "sine",
-        volume: -24
+        volume: -24 * MAX_VOLUME
     }).connect(mainPanner).start();
+    
+    // Add intersection sound synth
+    intersectionSound = new Tone.Synth({
+        oscillator: {
+            type: "sine"
+        },
+        envelope: {
+            attack: 0.01,
+            decay: 0.2,
+            sustain: 0.2,
+            release: 0.5
+        }
+    }).connect(mainReverb);
+    
+    // Add Ouroboros sound - a mystical chord
+    ouroborosSound = new Tone.PolySynth(Tone.Synth, {
+        oscillator: {
+            type: "sine"
+        },
+        envelope: {
+            attack: 0.02,
+            decay: 0.3,
+            sustain: 0.4,
+            release: 1
+        }
+    }).connect(mainReverb);
 }
 
 function windowResized() {
@@ -1296,6 +1346,12 @@ function draw() {
         updateTimeDisplay();  // Keep this to update control panel time
         updateGrowth();
         
+        updateEnvironmentDisplay();
+        
+        checkSelfIntersection();
+        updateIntersectionEffects();
+        updateOuroborosEffects(); // Add this line
+        
     } catch (e) {
         console.error('Draw error:', e);
         // Reset critical states
@@ -2142,21 +2198,34 @@ function drawSegments() {
 	digestionEnergy = max(0, digestionEnergy - energyDecayRate);
 }
 
-// Update checkSelfIntersection function
+// Update checkSelfIntersection function to detect Ouroboros more easily
 function checkSelfIntersection() {
-	let head = segments[0];
-	for (let i = 5; i < segments.length; i++) {
-		let segment = segments[i];
-		let d = dist(head.x, head.y, segment.x, segment.y);
-		if (d < segmentLength * 0.5) {
-			evolveOrganism(head);
-			headGlow = maxGlow * 2;
-			break;
-		}
-	}
+    let head = segments[0];
+    
+    // Check more tail segments for Ouroboros (last 8 segments instead of 3)
+    for (let i = segments.length - 8; i < segments.length; i++) {
+        let d = dist(head.x, head.y, segments[i].x, segments[i].y);
+        // Increased detection radius
+        if (d < segmentLength * 0.8) {  // Increased from 0.5 to 0.8
+            createOuroborosEffect(head.x, head.y);
+            return true;
+        }
+    }
+    
+    // Check other intersections
+    for (let i = 4; i < segments.length - 8; i++) {
+        let d = dist(head.x, head.y, segments[i].x, segments[i].y);
+        if (d < segmentLength * 0.5) {
+            createIntersectionEffect(head.x, head.y);
+            playIntersectionSound();
+            return true;
+        }
+    }
+    
+    return false;
 }
 
-// Update updateSound function to include evolution
+// Update updateSound function to include safety limits
 function updateSound() {
     if (!audioStarted || segments.length === 0) return;
     
@@ -2164,8 +2233,8 @@ function updateSound() {
     let headX = segments[0].x;
     let headY = segments[0].y;
     
-    // Calculate pan position (-1 to 1)
-    let panTarget = map(headX, 0, width, -0.8, 0.8);
+    // Calculate pan position (-1 to 1) with safety limits
+    let panTarget = constrain(map(headX, 0, width, -0.8, 0.8), -1, 1);
     lastPanPosition = lerp(lastPanPosition, panTarget, panSmoothness);
     
     // Update panner
@@ -2176,34 +2245,52 @@ function updateSound() {
     let centerY = height / 2;
     let distanceFromCenter = dist(headX, headY, centerX, centerY);
     let maxDistance = dist(0, 0, width/2, height/2);
-    let distanceRatio = distanceFromCenter / maxDistance;
+    let distanceRatio = constrain(distanceFromCenter / maxDistance, 0, 1);
     
-    // Update reverb based on position
-    mainReverb.wet.rampTo(map(distanceRatio, 0, 1, 0.2, 0.4), 0.1);
+    // Update reverb with safety limits
+    mainReverb.wet.rampTo(
+        Math.min(map(distanceRatio, 0, 1, 0.2, 0.4), MAX_FEEDBACK),
+        0.1
+    );
     
-    // Update delay based on movement
+    // Update delay based on movement with safety limits
     if (movementAmount > soundThreshold && 
         millis() - lastSoundTime > minSoundInterval) {
         
-        // Frequency modulation based on vertical position
-        let freq = map(headY, height, 0, 110, 880);
+        // Frequency modulation with safety limits
+        let freq = constrain(
+            map(headY, height, 0, 110, 880),
+            MIN_FILTER_FREQ,
+            MAX_FILTER_FREQ
+        );
         osc.frequency.rampTo(freq, 0.1);
         
-        // Filter modulation based on horizontal position
-        let filterFreq = map(Math.abs(headX - centerX), 0, width/2, 2000, 500);
+        // Filter modulation with safety limits
+        let filterFreq = constrain(
+            map(Math.abs(headX - centerX), 0, width/2, 2000, 500),
+            MIN_FILTER_FREQ,
+            MAX_FILTER_FREQ
+        );
         spatialFilter.frequency.rampTo(filterFreq, 0.1);
         
-        // Delay feedback based on distance from center
-        spatialDelay.feedback.rampTo(map(distanceRatio, 0, 1, 0.1, 0.3), 0.1);
+        // Delay feedback with safety limits
+        spatialDelay.feedback.rampTo(
+            Math.min(map(distanceRatio, 0, 1, 0.1, 0.3), MAX_FEEDBACK),
+            0.1
+        );
         
-        // Update drone sounds with spatial characteristics
+        // Update drone sounds with safety limits
         if (droneOsc1 && droneOsc2) {
-            let baseFreq = map(distanceRatio, 0, 1, 100, 150);
+            let baseFreq = constrain(
+                map(distanceRatio, 0, 1, 100, 150),
+                MIN_FILTER_FREQ,
+                MAX_FILTER_FREQ
+            );
             droneOsc1.frequency.rampTo(baseFreq * 0.5, 0.2);
             droneOsc2.frequency.rampTo(baseFreq * 0.75, 0.2);
             
-            // Adjust volumes based on position and movement
-            let volumeMod = map(distanceRatio, 0, 1, 1, 0.6);
+            // Adjust volumes with safety limits
+            let volumeMod = constrain(map(distanceRatio, 0, 1, 1, 0.6), 0, MAX_VOLUME);
             droneOsc1.volume.rampTo(-24 * volumeMod, 0.1);
             droneOsc2.volume.rampTo(-24 * volumeMod, 0.1);
         }
@@ -3158,109 +3245,191 @@ let inspectionDuration = 180; // How long to inspect
 let inspectionTarget = null;
 let lastNewSegmentIndex = -1;
 
+// Remove or modify the updateGrowth function to do nothing
 function updateGrowth() {
-    let currentlyIntersecting = checkSelfIntersection();
-    let currentTime = millis();
-    
-    // Only grow when we first detect an intersection and cooldown has passed
-    if (currentlyIntersecting && !isIntersecting && 
-        currentTime - lastIntersectionTime > intersectionCooldown) {
-        
-        if (points < maxSegments) {
-            points++;
-            
-            // Add a new segment with distinct properties
-            let lastSegment = segments[segments.length - 1];
-            if (lastSegment) {
-                segments.push(createVector(lastSegment.x, lastSegment.y));
-                // Give new segment a distinct color
-                newSegmentColor = {
-                    r: random(180, 255),
-                    g: random(180, 255),
-                    b: random(180, 255)
-                };
-                bodyGlow.push(2); // Brighter glow for new segment
-                newSegmentWiggle = wiggleDuration;
-                
-                // Start inspection behavior
-                isInspectingNew = true;
-                inspectionTimer = inspectionDuration;
-                lastNewSegmentIndex = segments.length - 1;
-                inspectionTarget = segments[lastNewSegmentIndex];
-                
-                // Update counter
-                let segmentDisplay = document.getElementById('segment-count');
-                if (segmentDisplay) {
-                    segmentDisplay.textContent = `${points}/${maxSegments}`;
-                }
-                
-                lastIntersectionTime = currentTime;
-            }
-        }
-    }
-    
-    // Update inspection behavior
-    if (isInspectingNew && inspectionTimer > 0) {
-        // Make head move towards new segment
-        let head = segments[0];
-        let newSegment = segments[lastNewSegmentIndex];
-        if (head && newSegment) {
-            // Calculate direction to new segment
-            let dx = newSegment.x - head.x;
-            let dy = newSegment.y - head.y;
-            let dist = sqrt(dx * dx + dy * dy);
-            
-            // Move head towards new segment if not too close
-            if (dist > segmentLength * 2) {
-                targetX = newSegment.x + random(-30, 30);
-                targetY = newSegment.y + random(-30, 30);
-            }
-            
-            // Add sniffing movement
-            if (dist < segmentLength * 4) {
-                head.x += random(-5, 5);
-                head.y += random(-5, 5);
-            }
-        }
-        
-        inspectionTimer--;
-        if (inspectionTimer <= 0) {
-            isInspectingNew = false;
-        }
-    }
-    
-    // Draw new segment differently
-    if (lastNewSegmentIndex >= 0 && lastNewSegmentIndex < segments.length) {
-        let newSegment = segments[lastNewSegmentIndex];
-        push();
-        fill(newSegmentColor.r, newSegmentColor.g, newSegmentColor.b, 200);
-        noStroke();
-        circle(newSegment.x, newSegment.y, segmentLength * 1.2);
-        pop();
-    }
-    
-    isIntersecting = currentlyIntersecting;
+    // Empty function - no more growth
+    return;
 }
 
-// Make sure segment display is updated
-function updateSegmentDisplay() {
-    let segmentDisplay = document.getElementById('segment-count');
-    if (segmentDisplay) {
-        segmentDisplay.textContent = `${points}/${maxSegments}`;  // Show current/max segments
-    }
-}
-
-// Add this function to check for self-intersection
+// Modify checkSelfIntersection to just return false since we don't need it anymore
 function checkSelfIntersection() {
-    // Need to check at least 4 segments apart to avoid false positives
-    for (let i = 0; i < segments.length - 4; i++) {
-        for (let j = i + 4; j < segments.length; j++) {
-            let d = dist(segments[i].x, segments[i].y, segments[j].x, segments[j].y);
-            // If segments are very close, consider it an intersection
-            if (d < segmentLength * 0.5) {
-                return true;
-            }
+    return false;
+}
+
+// Add this function to update the environment display
+function updateEnvironmentDisplay() {
+    let dayPhaseElement = document.getElementById('day-phase');
+    let activityElement = document.getElementById('activity-level');
+    
+    if (dayPhaseElement && activityElement) {
+        // Update day phase
+        let phase = '';
+        if (realTimeOfDay.isNight) phase = '🌙 Night';
+        else if (realTimeOfDay.isDawn) phase = '🌅 Dawn';
+        else if (realTimeOfDay.isDay) phase = '☀️ Day';
+        else if (realTimeOfDay.isDusk) phase = '🌆 Dusk';
+        dayPhaseElement.textContent = phase;
+        
+        // Update activity level based on dayNightCycle.activityLevel
+        let activity = '';
+        if (dayNightCycle.activityLevel < 0.5) activity = 'Low';
+        else if (dayNightCycle.activityLevel < 1.0) activity = 'Medium';
+        else activity = 'High';
+        activityElement.textContent = activity;
+    }
+}
+
+// Add function to create spectacular intersection effects
+function createIntersectionEffect(x, y) {
+    // Create expanding ring
+    intersectionEffects.push({
+        x: x,
+        y: y,
+        radius: 0,
+        maxRadius: segmentLength * 4,
+        life: 1.0,
+        type: 'ring'
+    });
+    
+    // Create particles
+    for (let i = 0; i < 15; i++) {
+        let angle = random(TWO_PI);
+        let speed = random(3, 10);
+        intersectionEffects.push({
+            x: x,
+            y: y,
+            vx: cos(angle) * speed,
+            vy: sin(angle) * speed,
+            life: 1.0,
+            type: 'particle',
+            color: random([PALETTE.jade, PALETTE.sand, PALETTE.pearl]),
+            size: random(5, 15)
+        });
+    }
+}
+
+// Add function to play intersection sound
+function playIntersectionSound() {
+    if (!soundEnabled || !audioStarted) return;
+    
+    let now = millis();
+    if (now - lastIntersectionSound > minIntersectionSoundInterval) {
+        // Random harmonic frequency
+        let baseFreq = random([220, 330, 440, 550]);
+        intersectionSound.triggerAttackRelease(baseFreq, "16n");
+        lastIntersectionSound = now;
+    }
+}
+
+// Add function to update and draw intersection effects
+function updateIntersectionEffects() {
+    for (let i = intersectionEffects.length - 1; i >= 0; i--) {
+        let effect = intersectionEffects[i];
+        
+        if (effect.type === 'ring') {
+            // Update and draw expanding ring
+            effect.radius += (effect.maxRadius - effect.radius) * 0.1;
+            effect.life *= 0.95;
+            
+            push();
+            noFill();
+            strokeWeight(2);
+            stroke(255, 255, 255, effect.life * 255);
+            drawingContext.shadowBlur = 20;
+            drawingContext.shadowColor = `rgba(255, 255, 255, ${effect.life})`;
+            circle(effect.x, effect.y, effect.radius * 2);
+            pop();
+            
+        } else if (effect.type === 'particle') {
+            // Update particle position with gravity and drift
+            effect.x += effect.vx;
+            effect.vy += 0.2; // gravity
+            effect.y += effect.vy;
+            effect.life *= 0.96;
+            
+            // Draw particle with glow
+            push();
+            noStroke();
+            drawingContext.shadowBlur = 15;
+            drawingContext.shadowColor = `rgba(${effect.color.r}, ${effect.color.g}, ${effect.color.b}, ${effect.life})`;
+            fill(effect.color.r, effect.color.g, effect.color.b, effect.life * 255);
+            circle(effect.x, effect.y, effect.size * effect.life);
+            pop();
+        }
+        
+        // Remove dead effects
+        if (effect.life < 0.01) {
+            intersectionEffects.splice(i, 1);
         }
     }
-    return false;
+}
+
+// Add Ouroboros effect creation
+function createOuroborosEffect(x, y) {
+    isOuroboros = true;
+    ouroborosTimer = ouroborosDuration;
+    
+    // Create circular mandala effect
+    for (let i = 0; i < 36; i++) {
+        let angle = (i / 36) * TWO_PI;
+        let radius = segmentLength * 4;
+        ouroborosEffects.push({
+            x: x + cos(angle) * radius,
+            y: y + sin(angle) * radius,
+            angle: angle,
+            radius: radius,
+            life: 1.0,
+            color: random([PALETTE.jade, PALETTE.sand, PALETTE.pearl, PALETTE.deepTeal])
+        });
+    }
+    
+    // Play mystical chord
+    if (soundEnabled && audioStarted && millis() - lastOuroborosSound > 1000) {
+        ouroborosSound.triggerAttackRelease(['C4', 'E4', 'G4', 'B4'], '2n');
+        lastOuroborosSound = millis();
+    }
+}
+
+// Add Ouroboros effect update and draw
+function updateOuroborosEffects() {
+    if (!isOuroboros) return;
+    
+    // Update timer
+    if (ouroborosTimer > 0) {
+        ouroborosTimer--;
+    } else {
+        isOuroboros = false;
+        ouroborosEffects = [];
+        return;
+    }
+    
+    // Draw mandala effect
+    push();
+    blendMode(SCREEN);
+    
+    for (let effect of ouroborosEffects) {
+        // Update position with spiral motion
+        effect.angle += 0.01;
+        effect.radius *= 0.995;
+        
+        let x = effect.x + cos(effect.angle) * 2;
+        let y = effect.y + sin(effect.angle) * 2;
+        
+        // Draw glowing symbol
+        noStroke();
+        drawingContext.shadowBlur = 20;
+        drawingContext.shadowColor = `rgba(${effect.color.r}, ${effect.color.g}, ${effect.color.b}, ${effect.life})`;
+        
+        fill(effect.color.r, effect.color.g, effect.color.b, effect.life * 255);
+        circle(x, y, 10 * effect.life);
+        
+        // Draw connecting lines
+        stroke(effect.color.r, effect.color.g, effect.color.b, effect.life * 100);
+        strokeWeight(1);
+        line(x, y, segments[0].x, segments[0].y);
+        
+        effect.life *= 0.995;
+    }
+    
+    pop();
 }
