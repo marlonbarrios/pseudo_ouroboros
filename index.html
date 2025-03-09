@@ -127,6 +127,16 @@
 			gap: 8px;
 			margin-top: 2px;
 		}
+		.env-params {
+			display: flex;
+			flex-direction: column;
+			gap: 4px;
+			margin-top: 2px;
+			font-size: 12px;
+		}
+		.env-params span {
+			opacity: 0.9;
+		}
 		.time-info {
 			display: flex;
 			flex-direction: column;
@@ -161,17 +171,12 @@
 				<span id="time-state" class="state-text">Day ☀️</span>
 			</div>
 		</div>
-		<div class="control-item">
-			<span>🔄 Segments</span>
-			<span id="segment-count">40/100</span>
-		</div>
 		<div class="control-item sound-info">
-			<span>🎵 Sound Profile</span>
+			<span>🌍 Environment</span>
 			<div class="sound-details">
-				<span id="tone-text">Dawn (220Hz)</span>
-				<div class="sound-params">
-					<span>Filter: <span id="filter-freq">1200Hz</span></span>
-					<span>Reverb: <span id="reverb-amount">50%</span></span>
+				<div class="env-params">
+					<span>Time: <span id="day-phase">Dawn</span></span>
+					<span>Activity: <span id="activity-level">Medium</span></span>
 				</div>
 			</div>
 		</div>
