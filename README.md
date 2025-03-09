@@ -1,4 +1,3 @@
-Created by **Marlon Barrios Solano**
 
 # Pheudo Ouroboros: The Genesis of Self Interest in Gradient Descent
 
@@ -10,6 +9,8 @@ Created by **Marlon Barrios Solano**
 
 ## Overview
 
+Created by **Marlon Barrios Solano**
+ 
 Pheudo Ouroboros explores the intersection of art, sound, and algorithmic evolution. The project features an autonomous, snake-like entity whose movement and aesthetics are influenced by:
 
 - **Organic Movement:**  
@@ -29,14 +30,7 @@ Pheudo Ouroboros explores the intersection of art, sound, and algorithmic evolut
 
 <img width="1479" alt="Screenshot 2025-03-09 at 4 31 44 PM" src="https://github.com/user-attachments/assets/be29c878-9554-445a-8f7d-6a2c1dba5137" />
 
----
-
-## Watch the Video
-
-Check out the project video on YouTube:  
-[https://youtu.be/58GtF1Lki5Y](https://youtu.be/58GtF1Lki5Y)
-
----
+--
 
 ## Live Demo
 
@@ -46,6 +40,15 @@ Experience the project live at:
 <img width="1479" alt="Screenshot 2025-03-09 at 4 31 14 PM" src="https://github.com/user-attachments/assets/c6026d24-7806-4226-94c3-d335336845ce" />
 
 ---
+
+
+
+## Watch the Video
+
+Check out the project video on YouTube:  
+[https://youtu.be/58GtF1Lki5Y](https://youtu.be/58GtF1Lki5Y)
+
+-
 
 ## Installation
 
