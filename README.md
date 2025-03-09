@@ -1,4 +1,8 @@
+Created by **Marlon Barrios Solano**
+
 # Pheudo Ouroboros: The Genesis of Self Interest in Gradient Descent
+
+<img width="1479" alt="Screenshot 2025-03-09 at 4 31 52 PM" src="https://github.com/user-attachments/assets/72cc6de8-a554-4349-b71e-1b7c63be07a5" />
 
 **Pheudo Ouroboros** is an experimental interactive generative art project that fuses intricate visual patterns with dynamic audio synthesis. Inspired by self-organizing systems and the iterative nature of gradient descent, this project simulates a snake-like organism that evolves, fragments, and reassembles—mimicking the ancient symbol of eternal cyclic renewal, the Ouroboros.
 
@@ -11,7 +15,16 @@ Pheudo Ouroboros explores the intersection of art, sound, and algorithmic evolut
 - **Dynamic Audio Synthesis:** Leveraging p5.js and Tone.js (or the p5.js sound library), layered underwater and techno soundscapes are generated and modulated in real time based on the organism’s motion and internal state.
 - **Evolution and Regeneration:** The system “evolves” over time by increasing complexity, altering color palettes, and modulating sound. It periodically fragments and reassembles to evoke the Ouroboros—an eternal symbol of self-renewal.
 - **Time-of-Day Influence:** The creature adapts its behavior according to the time of day. Real-world day/night cycles affect its movement, color transitions, and audio effects, resulting in a unique experience during dawn, day, dusk, and night.
-- **Interactive and Environmental Influences:** User inputs (mouse movement, clicks, key presses) further shape the creature’s behavior, making for an immersive and ever-changing digital ecosystem.
+- **Interactive and Environmental Influences:** User inputs (mouse movement, clicks, key presses) further shape the creature’s behavior, creating an immersive and ever-changing digital ecosystem.
+
+<img width="1479" alt="Screenshot 2025-03-09 at 4 31 44 PM" src="https://github.com/user-attachments/assets/be29c878-9554-445a-8f7d-6a2c1dba5137" />
+
+---
+
+## Watch the Video
+
+Check out the project video on YouTube:  
+[https://youtu.be/58GtF1Lki5Y](https://youtu.be/58GtF1Lki5Y)
 
 ---
 
@@ -19,6 +32,8 @@ Pheudo Ouroboros explores the intersection of art, sound, and algorithmic evolut
 
 Experience the project live at:  
 [https://marlonbarrios.github.io/pseudo_ouroboros/](https://marlonbarrios.github.io/pseudo_ouroboros/)
+
+<img width="1479" alt="Screenshot 2025-03-09 at 4 31 14 PM" src="https://github.com/user-attachments/assets/c6026d24-7806-4226-94c3-d335336845ce" />
 
 ---
 
@@ -39,6 +54,9 @@ cd pheudo-ouroboros
 	•	For advanced sound features, include Tone.js (or use the configured p5.js sound library).
 	4.	Running the Project:
 Open the index.html file in a modern web browser (e.g., Chrome or Firefox) that supports the Web Audio API.
+
+<img width="1479" alt="Screenshot 2025-03-09 at 4 31 10 PM" src="https://github.com/user-attachments/assets/10a02524-2235-474d-9155-4237a17820f6" />
+
 
 Usage
 	•	Toggle Sound:
