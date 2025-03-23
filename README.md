@@ -4,6 +4,8 @@ Created by **Marlon Barrios Solano**
 
 <img width="1479" alt="Screenshot 2025-03-09 at 4 31 52 PM" src="https://github.com/user-attachments/assets/72cc6de8-a554-4349-b71e-1b7c63be07a5" />
 
+# Pseudo Ouroboros: The Genesis of Self Interest in Gradient Descent (early prototype)
+
 **Pseudo Ouroboros** is an experimental interactive generative art project that fuses intricate visual patterns with dynamic audio synthesis. Inspired by self-organizing systems and the iterative nature of gradient descent, this project simulates a snake-like organism that continuously evolves—mimicking the ancient symbol of eternal cyclic renewal, the Ouroboros.
 
 ---
